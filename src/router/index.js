@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { useAuthStore } from '../stores/auth'
+import { useAuthStore } from '@stores/auth'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -7,49 +7,49 @@ const router = createRouter({
     {
       path: '/login',
       name: 'login',
-      component: () => import('../views/auth/LoginView.vue'),
+      component: () => import('@views/auth/LoginView.vue'),
       meta: { middleware: 'public', layout: 'public' },
     },
     {
       path: '/dashboard',
       name: 'dashboard',
-      component: () => import('../views/dashboard/DashboardView.vue'),
+      component: () => import('@views/dashboard/DashboardView.vue'),
       meta: { middleware: 'private', layout: 'private' },
     },
     {
       path: '/profile',
       name: 'profile',
-      component: () => import('../views/dashboard/ProfileView.vue'),
+      component: () => import('@views/dashboard/ProfileView.vue'),
       meta: { middleware: 'private', layout: 'private' },
     },
     {
       path: '/profile/update',
       name: 'profile-update',
-      component: () => import('../views/dashboard/ProfileUpdateView.vue'),
+      component: () => import('@views/dashboard/ProfileUpdateView.vue'),
       meta: { middleware: 'private', layout: 'private' },
     },
     {
       path: '/projects',
       name: 'projects-all',
-      component: () => import('../views/dashboard/projects/all.vue'),
+      component: () => import('@views/dashboard/projects/all.vue'),
       meta: { middleware: 'private', layout: 'private' },
     },
     {
       path: '/projects/create',
       name: 'project-create',
-      component: () => import('../views/dashboard/projects/create.vue'),
+      component: () => import('@views/dashboard/projects/create.vue'),
       meta: { middleware: 'private', layout: 'private' },
     },
     {
       path: '/projects/:id',
       name: 'project-view',
-      component: () => import('../views/dashboard/projects/view.vue'),
+      component: () => import('@views/dashboard/projects/view.vue'),
       meta: { middleware: 'private', layout: 'private' },
     },
     {
       path: '/projects/:id/update',
       name: 'project-update',
-      component: () => import('../views/dashboard/projects/update.vue'),
+      component: () => import('@views/dashboard/projects/update.vue'),
       meta: { middleware: 'private', layout: 'private' },
     },
     {

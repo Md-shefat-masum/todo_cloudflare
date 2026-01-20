@@ -24,8 +24,8 @@
 </template>
 
 <script>
-import { useProjectStore } from '../../stores/project'
-import ProjectForm from '../../../components/project/form.vue'
+import { useProjectStore } from '@stores/project'
+import ProjectForm from '@components/project/form.vue'
 
 export default {
   name: 'ProjectCreateView',

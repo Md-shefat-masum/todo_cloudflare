@@ -88,6 +88,7 @@ export async function createProject(prisma, projectData) {
 				title,
 				description: description || null,
 				creator,
+				createdAt: new Date(), // Explicitly set created_at timestamp
 			},
 		});
 
@@ -122,7 +123,9 @@ export async function updateProject(prisma, id, projectData) {
 		}
 
 		// Prepare update data (only include fields that are provided)
-		const updateData = {};
+		const updateData = {
+			updatedAt: new Date(), // Explicitly set updated_at timestamp
+		};
 		if (projectData.title !== undefined) updateData.title = projectData.title;
 		if (projectData.description !== undefined) updateData.description = projectData.description || null;
 

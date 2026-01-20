@@ -4,6 +4,7 @@ import { handleTodoRoutes } from './routes/todoRoutes.js';
 import { handleApiRoutes } from './routes/apiRoutes.js';
 import { handleAuthRoutes } from './routes/authRoutes.js';
 import { handleProjectRoutes } from './routes/projectRoutes.js';
+import { handleTaskRoutes } from './routes/taskRoutes.js';
 
 export default {
 	async fetch(request, env) {
@@ -40,7 +41,11 @@ export default {
 		const projectResponse = await handleProjectRoutes(request, prisma, corsHeaders, env);
 		if (projectResponse) return projectResponse;
 
-		// 5. Todo routes
+		// 5. Task routes
+		const taskResponse = await handleTaskRoutes(request, prisma, corsHeaders, env);
+		if (taskResponse) return taskResponse;
+
+		// 6. Todo routes
 		const todoResponse = await handleTodoRoutes(request, prisma, corsHeaders);
 		if (todoResponse) return todoResponse;
 

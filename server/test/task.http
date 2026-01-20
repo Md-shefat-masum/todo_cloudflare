@@ -1,0 +1,302 @@
+### Task Management API Tests
+### Base URL - Update this to match your server URL
+@baseUrl = http://localhost:5173
+@token = 
+@taskId = 
+@projectId = 1
+
+### Variables
+@userId = 1
+
+###############################################
+### Authentication (Required for most endpoints)
+###############################################
+
+### Login to get token
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "myphoto288@gmail.com",
+  "password": "11221122"
+}
+
+### Update token variable after login (copy from response)
+# @token = <paste-token-here>
+
+###############################################
+### GET /task - List All Tasks
+###############################################
+
+### 1. List all tasks (authenticated - defaults to user's tasks)
+GET {{baseUrl}}/task
+Authorization: Bearer {{token}}
+
+### 2. List all tasks without auth
+GET {{baseUrl}}/task
+
+### 3. List tasks filtered by project_id
+GET {{baseUrl}}/task?project_id={{projectId}}
+Authorization: Bearer {{token}}
+
+### 4. List tasks filtered by task_status
+GET {{baseUrl}}/task?task_status=pending
+Authorization: Bearer {{token}}
+
+### 5. List tasks filtered by priority
+GET {{baseUrl}}/task?priority=high
+Authorization: Bearer {{token}}
+
+### 6. List tasks with multiple filters
+GET {{baseUrl}}/task?project_id={{projectId}}&task_status=in_progress&priority=urgent
+Authorization: Bearer {{token}}
+
+### 7. List tasks assigned to specific user
+GET {{baseUrl}}/task?assigned_to={{userId}}
+Authorization: Bearer {{token}}
+
+###############################################
+### POST /task/create - Create New Task
+###############################################
+
+### 8. Create task with all fields
+# @name createTask
+POST {{baseUrl}}/task/create
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Complete project documentation",
+  "description": "Write comprehensive documentation for the project",
+  "projectId": {{projectId}},
+  "priority": "high",
+  "taskStatus": "pending",
+  "submissionDate": "2026-01-25T23:59:59Z",
+  "assignedTo": {{userId}},
+  "comment": "Important task"
+}
+
+### 9. Create simple task with only title
+POST {{baseUrl}}/task/create
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Simple task"
+}
+
+### 10. Create task with execution and completion dates (auto-calculates duration)
+POST {{baseUrl}}/task/create
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Task with duration",
+  "executionDate": "2026-01-21T09:00:00Z",
+  "completionDate": "2026-01-21T17:00:00Z"
+}
+
+### 11. Create task without authentication (should fail)
+POST {{baseUrl}}/task/create
+Content-Type: application/json
+
+{
+  "title": "Unauthorized Task"
+}
+
+### 12. Create task with invalid priority (should fail)
+POST {{baseUrl}}/task/create
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Invalid Priority Task",
+  "priority": "invalid"
+}
+
+### 13. Create task with invalid task_status (should fail)
+POST {{baseUrl}}/task/create
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Invalid Status Task",
+  "taskStatus": "invalid_status"
+}
+
+### 14. Create task with non-existent project_id (should fail)
+POST {{baseUrl}}/task/create
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Task with invalid project",
+  "projectId": 99999
+}
+
+###############################################
+### GET /task/{id} - Get Single Task
+###############################################
+
+### 15. Get task by ID (Update @taskId from create response)
+GET {{baseUrl}}/task/{{taskId}}
+
+### 16. Get non-existent task (should return 404)
+GET {{baseUrl}}/task/99999
+
+### 17. Get task with invalid ID (should return error)
+GET {{baseUrl}}/task/invalid
+
+###############################################
+### POST /task/{id}/update - Update Task
+###############################################
+
+### 18. Update task status to in_progress
+POST {{baseUrl}}/task/{{taskId}}/update
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "taskStatus": "in_progress",
+  "executionDate": "2026-01-21T10:00:00Z"
+}
+
+### 19. Update task to completed with completion date
+POST {{baseUrl}}/task/{{taskId}}/update
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "taskStatus": "completed",
+  "completionDate": "2026-01-21T18:00:00Z"
+}
+
+### 20. Update task priority and description
+POST {{baseUrl}}/task/{{taskId}}/update
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "priority": "urgent",
+  "description": "Updated description with more details"
+}
+
+### 21. Update task with comment
+POST {{baseUrl}}/task/{{taskId}}/update
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "comment": "Added important notes about this task"
+}
+
+### 22. Update task without authentication (should fail)
+POST {{baseUrl}}/task/{{taskId}}/update
+Content-Type: application/json
+
+{
+  "taskStatus": "completed"
+}
+
+### 23. Update non-existent task (should return 404)
+POST {{baseUrl}}/task/99999/update
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Non-existent Task"
+}
+
+### 24. Update task with invalid priority (should fail)
+POST {{baseUrl}}/task/{{taskId}}/update
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "priority": "invalid_priority"
+}
+
+###############################################
+### POST /task/{id}/delete - Delete Task
+###############################################
+
+### 25. Delete task (Update @taskId)
+POST {{baseUrl}}/task/{{taskId}}/delete
+Authorization: Bearer {{token}}
+
+### 26. Delete task without authentication (should fail)
+POST {{baseUrl}}/task/{{taskId}}/delete
+
+### 27. Delete non-existent task (should return 404)
+POST {{baseUrl}}/task/99999/delete
+Authorization: Bearer {{token}}
+
+### 28. Delete task with invalid ID (should return error)
+POST {{baseUrl}}/task/invalid/delete
+Authorization: Bearer {{token}}
+
+###############################################
+### Complete Workflow Test
+###############################################
+
+### Step 1: Create a task
+# @name workflowCreate
+POST {{baseUrl}}/task/create
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Workflow Test Task",
+  "description": "Testing complete CRUD workflow",
+  "projectId": {{projectId}},
+  "priority": "mid",
+  "taskStatus": "pending"
+}
+
+### Step 2: Get the created task (copy id from response above)
+# GET {{baseUrl}}/task/<id-from-step-1>
+
+### Step 3: Update task status to in_progress
+# POST {{baseUrl}}/task/<id-from-step-1>/update
+# Authorization: Bearer {{token}}
+# Content-Type: application/json
+#
+# {
+#   "taskStatus": "in_progress",
+#   "executionDate": "2026-01-21T09:00:00Z"
+# }
+
+### Step 4: Update task to completed
+# POST {{baseUrl}}/task/<id-from-step-1>/update
+# Authorization: Bearer {{token}}
+# Content-Type: application/json
+#
+# {
+#   "taskStatus": "completed",
+#   "completionDate": "2026-01-21T17:00:00Z"
+# }
+
+### Step 5: Delete the task
+# POST {{baseUrl}}/task/<id-from-step-1>/delete
+# Authorization: Bearer {{token}}
+
+###############################################
+### Filter Examples
+###############################################
+
+### Get overdue tasks (pending/in_progress with past submission_date)
+GET {{baseUrl}}/task?task_status=pending
+Authorization: Bearer {{token}}
+
+### Get urgent tasks
+GET {{baseUrl}}/task?priority=urgent
+Authorization: Bearer {{token}}
+
+### Get all tasks for a project
+GET {{baseUrl}}/task?project_id={{projectId}}
+Authorization: Bearer {{token}}
+
+### Get my in-progress tasks
+GET {{baseUrl}}/task?task_status=in_progress
+Authorization: Bearer {{token}}

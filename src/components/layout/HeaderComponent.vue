@@ -26,8 +26,8 @@
 </template>
 
 <script>
-import { useAuthStore } from '../../stores/auth'
-import { useUIStore } from '../../stores/ui'
+import { useAuthStore } from '@stores/auth'
+import { useUIStore } from '@stores/ui'
 
 export default {
   name: 'HeaderComponent',

@@ -43,11 +43,11 @@
         <div class="flex items-center gap-4 text-sm text-gray-500">
           <span>
             <i class="fas fa-calendar mr-1"></i>
-            Created: {{ formatDate(project.created_at) }}
+            Created: {{ formatDate(project.createdAt) }}
           </span>
           <span>
             <i class="fas fa-clock mr-1"></i>
-            Updated: {{ formatDate(project.updated_at) }}
+            Updated: {{ formatDate(project.updatedAt) }}
           </span>
         </div>
       </div>
@@ -74,7 +74,7 @@
 </template>
 
 <script>
-import { useProjectStore } from '../../stores/project'
+import { useProjectStore } from '@stores/project'
 
 export default {
   name: 'ProjectViewView',

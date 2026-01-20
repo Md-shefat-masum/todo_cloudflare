@@ -6,8 +6,8 @@
 </template>
 
 <script>
-import PublicLayout from './layouts/PublicLayout.vue'
-import PrivateLayout from './layouts/PrivateLayout.vue'
+import PublicLayout from '@layouts/PublicLayout.vue'
+import PrivateLayout from '@layouts/PrivateLayout.vue'
 
 export default {
   name: 'App',

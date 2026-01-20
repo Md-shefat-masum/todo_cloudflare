@@ -41,7 +41,7 @@
 </template>
 
 <script>
-import { useAuthStore } from '../../stores/auth'
+import { useAuthStore } from '@stores/auth'
 
 export default {
   name: 'ProfileView',

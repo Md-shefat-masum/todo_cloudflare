@@ -16,6 +16,8 @@
 		"db:migrate:prod": "npx wrangler d1 execute todo --remote --file=./prisma/migrations/003_setup_all_tables.sql",
 		"db:migrate:projects": "npx wrangler d1 execute todo --local --file=./prisma/migrations/004_create_projects.sql",
 		"db:migrate:projects:prod": "npx wrangler d1 execute todo --remote --file=./prisma/migrations/004_create_projects.sql",
+		"db:migrate:tasks": "npx wrangler d1 execute todo --local --file=./prisma/migrations/005_create_tasks.sql",
+		"db:migrate:tasks:prod": "npx wrangler d1 execute todo --remote --file=./prisma/migrations/005_create_tasks.sql",
 		"db:migrate:prod:users": "npx wrangler d1 execute todo --remote --file=./prisma/migrations/001_create_users.sql",
 		"db:migrate:prod:todos": "npx wrangler d1 execute todo --remote --file=./prisma/migrations/002_create_todos.sql",
 		"db:create-user": "npx wrangler d1 execute todo --local --command=\"INSERT INTO users (name, email, password, updated_at) VALUES ('shefat', 'myphoto288@gmail.com', '11221122', CURRENT_TIMESTAMP);\"",

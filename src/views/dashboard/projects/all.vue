@@ -44,7 +44,7 @@
         <div class="flex justify-between items-center text-xs text-gray-500">
           <span>
             <i class="fas fa-calendar mr-1"></i>
-            {{ formatDate(project.created_at) }}
+            {{ formatDate(project.createdAt) }}
           </span>
           <div class="flex gap-2">
             <button
@@ -80,7 +80,7 @@
 </template>
 
 <script>
-import { useProjectStore } from '../../stores/project'
+import { useProjectStore } from '@stores/project'
 
 export default {
   name: 'ProjectsAllView',

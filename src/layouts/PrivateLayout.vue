@@ -17,8 +17,8 @@
 </template>
 
 <script>
-import HeaderComponent from '../components/layout/HeaderComponent.vue'
-import SidebarComponent from '../components/layout/SidebarComponent.vue'
+import HeaderComponent from '@components/layout/HeaderComponent.vue'
+import SidebarComponent from '@components/layout/SidebarComponent.vue'
 
 export default {
   name: 'PrivateLayout',
