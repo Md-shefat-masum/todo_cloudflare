@@ -57,7 +57,48 @@ GET {{baseUrl}}/task?assigned_to={{userId}}
 Authorization: Bearer {{token}}
 
 ###############################################
-### POST /task/create - Create New Task
+### POST /task/fast-create - Fast Create Task (Minimal Fields)
+###############################################
+
+### 7. Fast create task with only project_id and title
+POST {{baseUrl}}/task/fast-create
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "projectId": {{projectId}},
+  "title": "Quick Task"
+}
+
+### 8. Fast create without authentication (should fail)
+POST {{baseUrl}}/task/fast-create
+Content-Type: application/json
+
+{
+  "projectId": {{projectId}},
+  "title": "Unauthorized Quick Task"
+}
+
+### 9. Fast create without project_id (should fail)
+POST {{baseUrl}}/task/fast-create
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Missing Project ID"
+}
+
+### 10. Fast create without title (should fail)
+POST {{baseUrl}}/task/fast-create
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "projectId": {{projectId}}
+}
+
+###############################################
+### POST /task/create - Create New Task (Full)
 ###############################################
 
 ### 8. Create task with all fields
@@ -139,20 +180,20 @@ Content-Type: application/json
 ### GET /task/{id} - Get Single Task
 ###############################################
 
-### 15. Get task by ID (Update @taskId from create response)
+### 16. Get task by ID (Update @taskId from create response)
 GET {{baseUrl}}/task/{{taskId}}
 
-### 16. Get non-existent task (should return 404)
+### 17. Get non-existent task (should return 404)
 GET {{baseUrl}}/task/99999
 
-### 17. Get task with invalid ID (should return error)
+### 18. Get task with invalid ID (should return error)
 GET {{baseUrl}}/task/invalid
 
 ###############################################
 ### POST /task/{id}/update - Update Task
 ###############################################
 
-### 18. Update task status to in_progress
+### 19. Update task status to in_progress
 POST {{baseUrl}}/task/{{taskId}}/update
 Authorization: Bearer {{token}}
 Content-Type: application/json
@@ -162,7 +203,7 @@ Content-Type: application/json
   "executionDate": "2026-01-21T10:00:00Z"
 }
 
-### 19. Update task to completed with completion date
+### 20. Update task to completed with completion date
 POST {{baseUrl}}/task/{{taskId}}/update
 Authorization: Bearer {{token}}
 Content-Type: application/json
@@ -172,7 +213,7 @@ Content-Type: application/json
   "completionDate": "2026-01-21T18:00:00Z"
 }
 
-### 20. Update task priority and description
+### 21. Update task priority and description
 POST {{baseUrl}}/task/{{taskId}}/update
 Authorization: Bearer {{token}}
 Content-Type: application/json
@@ -182,7 +223,7 @@ Content-Type: application/json
   "description": "Updated description with more details"
 }
 
-### 21. Update task with comment
+### 22. Update task with comment
 POST {{baseUrl}}/task/{{taskId}}/update
 Authorization: Bearer {{token}}
 Content-Type: application/json
@@ -191,7 +232,7 @@ Content-Type: application/json
   "comment": "Added important notes about this task"
 }
 
-### 22. Update task without authentication (should fail)
+### 23. Update task without authentication (should fail)
 POST {{baseUrl}}/task/{{taskId}}/update
 Content-Type: application/json
 
@@ -199,7 +240,7 @@ Content-Type: application/json
   "taskStatus": "completed"
 }
 
-### 23. Update non-existent task (should return 404)
+### 24. Update non-existent task (should return 404)
 POST {{baseUrl}}/task/99999/update
 Authorization: Bearer {{token}}
 Content-Type: application/json
@@ -208,7 +249,7 @@ Content-Type: application/json
   "title": "Non-existent Task"
 }
 
-### 24. Update task with invalid priority (should fail)
+### 25. Update task with invalid priority (should fail)
 POST {{baseUrl}}/task/{{taskId}}/update
 Authorization: Bearer {{token}}
 Content-Type: application/json
@@ -221,18 +262,18 @@ Content-Type: application/json
 ### POST /task/{id}/delete - Delete Task
 ###############################################
 
-### 25. Delete task (Update @taskId)
+### 26. Delete task (Update @taskId)
 POST {{baseUrl}}/task/{{taskId}}/delete
 Authorization: Bearer {{token}}
 
-### 26. Delete task without authentication (should fail)
+### 27. Delete task without authentication (should fail)
 POST {{baseUrl}}/task/{{taskId}}/delete
 
-### 27. Delete non-existent task (should return 404)
+### 28. Delete non-existent task (should return 404)
 POST {{baseUrl}}/task/99999/delete
 Authorization: Bearer {{token}}
 
-### 28. Delete task with invalid ID (should return error)
+### 29. Delete task with invalid ID (should return error)
 POST {{baseUrl}}/task/invalid/delete
 Authorization: Bearer {{token}}
 

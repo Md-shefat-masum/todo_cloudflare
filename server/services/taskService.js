@@ -2,6 +2,19 @@
  * Task Service - Handles all task-related database operations
  */
 
+// CRITICAL: Import and reference PrismaClient at module level
+// This forces the bundler to include all Prisma models including taskModel
+import { PrismaClient } from '@prisma/client';
+
+/**
+ * Force reference to taskModel property name at module level
+ * This creates a static reference that the bundler must preserve
+ */
+const TASK_MODEL_PROPERTY = 'taskModel';
+
+// Create a reference that can't be optimized away
+const _taskModelKey = TASK_MODEL_PROPERTY;
+
 /**
  * Calculate duration in minutes between two dates
  * @param {Date} startDate - Start date
@@ -21,6 +34,33 @@ function calculateDuration(startDate, endDate) {
  * @returns {Promise<Array>} Array of tasks
  */
 export async function listTasks(prisma, filters = {}) {
+	if (!prisma) {
+		return { success: false, error: 'Prisma client is not initialized', statusCode: 500 };
+	}
+	
+	// Debug: Check if taskModel exists - try multiple access methods
+	const taskModelAccess = prisma[_taskModelKey] || prisma.taskModel || prisma['taskModel'];
+	
+	if (!taskModelAccess) {
+		const availableModels = Object.keys(prisma).filter(key => 
+			!key.startsWith('_') && 
+			!key.startsWith('$') && 
+			typeof prisma[key] === 'object' &&
+			prisma[key] !== null
+		);
+		console.error('Prisma client does not have taskModel');
+		console.error('Tried accessing via:', ['taskModel', _taskModelKey, 'taskModel']);
+		console.error('Available models:', availableModels);
+		return { 
+			success: false, 
+			error: `Prisma taskModel not available. Available models: ${availableModels.join(', ')}. This is a bundling issue - taskModel is being tree-shaken out.`, 
+			statusCode: 500 
+		};
+	}
+	
+	// Use the accessed taskModel
+	const taskModel = taskModelAccess;
+	
 	try {
 		const where = {};
 		
@@ -40,7 +80,19 @@ export async function listTasks(prisma, filters = {}) {
 			where.priority = filters.priority;
 		}
 		
-		const tasks = await prisma.task.findMany({
+		// Access taskModel using the key (works even if getter was tree-shaken)
+		const taskModel = prisma[_taskModelKey] || prisma.taskModel;
+		
+		if (!taskModel || typeof taskModel.findMany !== 'function') {
+			console.error('taskModel.findMany is not available');
+			return { 
+				success: false, 
+				error: 'TaskModel.findMany not available in Prisma client. This is a bundling issue.', 
+				statusCode: 500 
+			};
+		}
+		
+		const tasks = await taskModel.findMany({
 			where,
 			orderBy: { createdAt: 'desc' },
 		});
@@ -59,13 +111,21 @@ export async function listTasks(prisma, filters = {}) {
  * @returns {Promise<Object>} Task object
  */
 export async function getTaskById(prisma, id) {
+	if (!prisma) {
+		return { success: false, error: 'Prisma client is not initialized', statusCode: 500 };
+	}
+	
 	try {
 		const taskId = parseInt(id);
 		if (isNaN(taskId)) {
 			return { success: false, error: 'Invalid task ID' };
 		}
 
-		const task = await prisma.task.findUnique({
+		const taskModel = prisma[_taskModelKey] || prisma.taskModel;
+		if (!taskModel) {
+			return { success: false, error: 'TaskModel not available', statusCode: 500 };
+		}
+		const task = await taskModel.findUnique({
 			where: { id: taskId },
 		});
 
@@ -87,6 +147,10 @@ export async function getTaskById(prisma, id) {
  * @returns {Promise<Object>} Created task object
  */
 export async function createTask(prisma, taskData) {
+	if (!prisma) {
+		return { success: false, error: 'Prisma client is not initialized', statusCode: 500 };
+	}
+	
 	try {
 		const {
 			title,
@@ -169,7 +233,11 @@ export async function createTask(prisma, taskData) {
 			);
 		}
 
-		const task = await prisma.task.create({
+		const taskModel = prisma[_taskModelKey] || prisma.taskModel;
+		if (!taskModel) {
+			return { success: false, error: 'TaskModel not available', statusCode: 500 };
+		}
+		const task = await taskModel.create({
 			data: {
 				title,
 				description: description || null,
@@ -201,6 +269,10 @@ export async function createTask(prisma, taskData) {
  * @returns {Promise<Object>} Updated task object
  */
 export async function updateTask(prisma, id, taskData) {
+	if (!prisma) {
+		return { success: false, error: 'Prisma client is not initialized', statusCode: 500 };
+	}
+	
 	try {
 		const taskId = parseInt(id);
 		if (isNaN(taskId)) {
@@ -208,7 +280,7 @@ export async function updateTask(prisma, id, taskData) {
 		}
 
 		// Check if task exists
-		const existingTask = await prisma.task.findUnique({
+		const existingTask = await prisma.taskModel.findUnique({
 			where: { id: taskId },
 		});
 
@@ -310,7 +382,11 @@ export async function updateTask(prisma, id, taskData) {
 			}
 		}
 
-		const task = await prisma.task.update({
+		const taskModel = prisma[_taskModelKey] || prisma.taskModel;
+		if (!taskModel) {
+			return { success: false, error: 'TaskModel not available', statusCode: 500 };
+		}
+		const task = await taskModel.update({
 			where: { id: taskId },
 			data: updateData,
 		});
@@ -338,6 +414,10 @@ export async function updateTask(prisma, id, taskData) {
  * @returns {Promise<Object>} Success status
  */
 export async function deleteTask(prisma, id) {
+	if (!prisma) {
+		return { success: false, error: 'Prisma client is not initialized', statusCode: 500 };
+	}
+	
 	try {
 		const taskId = parseInt(id);
 		if (isNaN(taskId)) {
@@ -345,7 +425,7 @@ export async function deleteTask(prisma, id) {
 		}
 
 		// Check if task exists
-		const existingTask = await prisma.task.findUnique({
+		const existingTask = await prisma.taskModel.findUnique({
 			where: { id: taskId },
 		});
 
@@ -353,7 +433,11 @@ export async function deleteTask(prisma, id) {
 			return { success: false, error: 'Task not found', statusCode: 404 };
 		}
 
-		await prisma.task.delete({
+		const taskModel = prisma[_taskModelKey] || prisma.taskModel;
+		if (!taskModel) {
+			return { success: false, error: 'TaskModel not available', statusCode: 500 };
+		}
+		await taskModel.delete({
 			where: { id: taskId },
 		});
 

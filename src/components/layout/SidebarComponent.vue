@@ -61,7 +61,7 @@ export default {
         { name: 'dashboard', label: 'Home', to: '/dashboard', icon: 'fa-home' },
         { name: 'profile', label: 'Profile', to: '/profile', icon: 'fa-user' },
         { name: 'project', label: 'Projects', to: '/projects', icon: 'fa-folder', disabled: false },
-        { name: 'todo', label: 'Todo', to: '#', icon: 'fa-tasks', disabled: true },
+        { name: 'tasks', label: 'Tasks', to: '/tasks', icon: 'fa-tasks', disabled: false },
       ],
     }
   },
@@ -101,6 +101,11 @@ export default {
       
       // For projects routes, check if path starts with /projects
       if (route === '/projects' && this.$route.path.startsWith('/projects')) {
+        return true
+      }
+      
+      // For tasks routes, check if path starts with /tasks
+      if (route === '/tasks' && this.$route.path.startsWith('/tasks')) {
         return true
       }
       

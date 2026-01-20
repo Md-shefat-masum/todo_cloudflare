@@ -32,7 +32,7 @@ model Project {
   @@map("projects")
 }
 
-model Task {
+model TaskModel {
   id             Int       @id @default(autoincrement())
   projectId      Int?      @map("project_id")
   title          String
@@ -49,14 +49,6 @@ model Task {
   updatedAt      DateTime  @updatedAt @map("updated_at")
 
   @@map("tasks")
-  @@index([projectId])
-  @@index([assignedTo])
-  @@index([taskStatus])
-  @@index([priority])
-  @@index([submissionDate])
-  @@index([assignedTo, taskStatus])
-  @@index([taskStatus, submissionDate])
-  @@index([projectId, taskStatus, submissionDate])
 }
 
 model Todo {

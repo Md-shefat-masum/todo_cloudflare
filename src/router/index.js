@@ -53,6 +53,24 @@ const router = createRouter({
       meta: { middleware: 'private', layout: 'private' },
     },
     {
+      path: '/tasks',
+      name: 'tasks-list',
+      component: () => import('@views/dashboard/tasks/list.vue'),
+      meta: { middleware: 'private', layout: 'private' },
+    },
+    {
+      path: '/tasks/:id',
+      name: 'task-view',
+      component: () => import('@views/dashboard/tasks/view.vue'),
+      meta: { middleware: 'private', layout: 'private' },
+    },
+    {
+      path: '/tasks/:id/edit',
+      name: 'task-edit',
+      component: () => import('@views/dashboard/tasks/edit.vue'),
+      meta: { middleware: 'private', layout: 'private' },
+    },
+    {
       path: '/',
       redirect: '/login',
     },
