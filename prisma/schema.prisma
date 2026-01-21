@@ -72,3 +72,21 @@ model Todo {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model Meeting {
+  id          Int      @id @default(autoincrement())
+  projectId   Int      @map("project_id")
+  title       String
+  date        DateTime
+  description String?
+  creator     Int
+  slug        String   @unique
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("project_meetings")
+  @@index([projectId])
+  @@index([creator])
+  @@index([date])
+  @@index([slug])
+}

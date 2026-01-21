@@ -1,0 +1,248 @@
+### Meeting Management API Tests
+### Base URL - Update this to match your server URL
+@baseUrl = http://localhost:5173
+@token = eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOjEsImVtYWlsIjoibXlwaG90bzI4OEBnbWFpbC5jb20iLCJuYW1lIjoic2hlZmF0IiwiaWF0IjoxNzY5MDEyODcyLCJleHAiOjE3NjkwOTkyNzJ9.tbU3AhQAlFvaQ_ecmYQYxSXdyImeZLoFPDL2WWSYQiM
+
+@meetingId = 
+@projectId = 1
+@slug = 
+
+### Variables
+@userId = 1
+
+###############################################
+### Authentication (Required for most endpoints)
+###############################################
+
+### Login to get token
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "myphoto288@gmail.com",
+  "password": "11221122"
+}
+
+### Update token variable after login (copy from response)
+# @token = <paste-token-here>
+
+###############################################
+### GET /meeting - List All Meetings
+###############################################
+
+### 1. List all meetings (authenticated - defaults to user's meetings)
+GET {{baseUrl}}/meeting
+Authorization: Bearer {{token}}
+
+### 2. List all meetings without auth
+GET {{baseUrl}}/meeting
+
+### 3. List meetings filtered by project_id
+GET {{baseUrl}}/meeting?project_id={{projectId}}
+Authorization: Bearer {{token}}
+
+### 4. List meetings filtered by creator
+GET {{baseUrl}}/meeting?creator={{userId}}
+Authorization: Bearer {{token}}
+
+### 5. List all meetings (no filter)
+GET {{baseUrl}}/meeting?creator=null
+Authorization: Bearer {{token}}
+
+###############################################
+### POST /meeting/create - Create Meeting
+###############################################
+
+### 6. Create meeting with all fields
+POST {{baseUrl}}/meeting/create
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "projectId": {{projectId}},
+  "date": "2026-02-15T10:00:00.000Z",
+  "description": "Quarterly review meeting",
+  "slug": "q1-review-2026"
+}
+
+### 7. Create meeting without slug (auto-generated)
+POST {{baseUrl}}/meeting/create
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "projectId": {{projectId}},
+  "date": "2026-02-20T14:30:00.000Z",
+  "description": "Team standup meeting"
+}
+
+### 8. Create meeting with minimal data
+POST {{baseUrl}}/meeting/create
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "projectId": {{projectId}},
+  "date": "2026-02-25T09:00:00.000Z"
+}
+
+### 9. Create meeting - missing projectId (should fail)
+POST {{baseUrl}}/meeting/create
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "date": "2026-02-25T09:00:00.000Z",
+  "description": "Test meeting"
+}
+
+### 10. Create meeting - missing date (should fail)
+POST {{baseUrl}}/meeting/create
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "projectId": {{projectId}},
+  "description": "Test meeting"
+}
+
+### 11. Create meeting - invalid project (should fail)
+POST {{baseUrl}}/meeting/create
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "projectId": 99999,
+  "date": "2026-02-25T09:00:00.000Z"
+}
+
+###############################################
+### GET /meeting/{id} - Get Single Meeting
+###############################################
+
+### 12. Get meeting by ID
+GET {{baseUrl}}/meeting/{{meetingId}}
+Authorization: Bearer {{token}}
+
+### 13. Get meeting by ID - invalid ID (should fail)
+GET {{baseUrl}}/meeting/99999
+Authorization: Bearer {{token}}
+
+### 14. Get meeting by ID - non-numeric (should fail)
+GET {{baseUrl}}/meeting/abc
+Authorization: Bearer {{token}}
+
+###############################################
+### GET /meeting/slug/{slug} - Get Meeting by Slug
+###############################################
+
+### 15. Get meeting by slug
+GET {{baseUrl}}/meeting/slug/{{slug}}
+Authorization: Bearer {{token}}
+
+### 16. Get meeting by slug - not found (should fail)
+GET {{baseUrl}}/meeting/slug/non-existent-slug
+Authorization: Bearer {{token}}
+
+###############################################
+### POST /meeting/{id}/update - Update Meeting
+###############################################
+
+### 17. Update meeting - all fields
+POST {{baseUrl}}/meeting/{{meetingId}}/update
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "projectId": {{projectId}},
+  "date": "2026-03-01T15:00:00.000Z",
+  "description": "Updated meeting description",
+  "slug": "updated-slug-2026"
+}
+
+### 18. Update meeting - partial update (date only)
+POST {{baseUrl}}/meeting/{{meetingId}}/update
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "date": "2026-03-05T11:00:00.000Z"
+}
+
+### 19. Update meeting - description only
+POST {{baseUrl}}/meeting/{{meetingId}}/update
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "description": "New description"
+}
+
+### 20. Update meeting - slug only
+POST {{baseUrl}}/meeting/{{meetingId}}/update
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "slug": "new-slug-2026"
+}
+
+### 21. Update meeting - unauthorized (different creator, should fail)
+# Note: This will fail if you're not the creator
+POST {{baseUrl}}/meeting/{{meetingId}}/update
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "description": "Unauthorized update attempt"
+}
+
+### 22. Update meeting - invalid meeting ID (should fail)
+POST {{baseUrl}}/meeting/99999/update
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "description": "Test"
+}
+
+### 23. Update meeting - duplicate slug (should fail)
+POST {{baseUrl}}/meeting/{{meetingId}}/update
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "slug": "existing-slug"
+}
+
+###############################################
+### POST /meeting/{id}/delete - Delete Meeting
+###############################################
+
+### 24. Delete meeting
+POST {{baseUrl}}/meeting/{{meetingId}}/delete
+Authorization: Bearer {{token}}
+
+### 25. Delete meeting - unauthorized (different creator, should fail)
+POST {{baseUrl}}/meeting/{{meetingId}}/delete
+Authorization: Bearer {{token}}
+
+### 26. Delete meeting - invalid meeting ID (should fail)
+POST {{baseUrl}}/meeting/99999/delete
+Authorization: Bearer {{token}}
+
+### 27. Delete meeting - not authenticated (should fail)
+POST {{baseUrl}}/meeting/{{meetingId}}/delete
+
+###############################################
+### Additional Test Cases
+###############################################
+
+### Get meetings for specific project
+GET {{baseUrl}}/meeting?project_id={{projectId}}
+Authorization: Bearer {{token}}
+
+### Get my meetings
+GET {{baseUrl}}/meeting?creator={{userId}}
+Authorization: Bearer {{token}}

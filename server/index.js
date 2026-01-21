@@ -5,6 +5,7 @@ import { handleApiRoutes } from './routes/apiRoutes.js';
 import { handleAuthRoutes } from './routes/authRoutes.js';
 import { handleProjectRoutes } from './routes/projectRoutes.js';
 import { handleTaskRoutes } from './routes/taskRoutes.js';
+import { handleMeetingRoutes } from './routes/meetingRoutes.js';
 
 export default {
 	async fetch(request, env) {
@@ -45,7 +46,11 @@ export default {
 		const taskResponse = await handleTaskRoutes(request, prisma, corsHeaders, env);
 		if (taskResponse) return taskResponse;
 
-		// 6. Todo routes
+		// 6. Meeting routes
+		const meetingResponse = await handleMeetingRoutes(request, prisma, corsHeaders, env);
+		if (meetingResponse) return meetingResponse;
+
+		// 7. Todo routes
 		const todoResponse = await handleTodoRoutes(request, prisma, corsHeaders);
 		if (todoResponse) return todoResponse;
 

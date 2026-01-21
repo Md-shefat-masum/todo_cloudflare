@@ -83,6 +83,24 @@ const router = createRouter({
       meta: { middleware: 'private', layout: 'private' },
     },
     {
+      path: '/meetings',
+      name: 'meetings-list',
+      component: () => import('@views/dashboard/meetings/list.vue'),
+      meta: { middleware: 'private', layout: 'private' },
+    },
+    {
+      path: '/meetings/:id',
+      name: 'meeting-view',
+      component: () => import('@views/dashboard/meetings/view.vue'),
+      meta: { middleware: 'private', layout: 'private' },
+    },
+    {
+      path: '/meetings/:id/edit',
+      name: 'meeting-edit',
+      component: () => import('@views/dashboard/meetings/edit.vue'),
+      meta: { middleware: 'private', layout: 'private' },
+    },
+    {
       path: '/',
       redirect: '/login',
     },

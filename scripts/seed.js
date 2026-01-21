@@ -23,6 +23,7 @@ console.log(`\n🌱 Seeding ${env} database...\n`);
 console.log('🗑️  Step 1: Truncating tables...\n');
 
 const tablesToTruncate = [
+  { table: 'project_meetings', sql: 'DELETE FROM project_meetings;' },
   { table: 'tasks', sql: 'DELETE FROM tasks;' },
   { table: 'projects', sql: 'DELETE FROM projects;' },
   { table: 'users', sql: "DELETE FROM users;" },
@@ -47,6 +48,7 @@ console.log('📦 Step 2: Inserting seed data...\n');
 
 const seedFiles = [
   '007_add_demo_data.sql',
+  '009_add_meeting_seed.sql',
 ];
 
 let successCount = 0;

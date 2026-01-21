@@ -24,7 +24,7 @@ console.log(`\n🚀 Running migrations for ${env} database...\n`);
 // Step 1: Drop all tables
 console.log('🗑️  Step 1: Dropping all existing tables...\n');
 
-const tablesToDrop = ['tasks', 'projects', 'users',];
+const tablesToDrop = ['project_meetings', 'tasks', 'projects', 'users'];
 
 for (const table of tablesToDrop) {
   try {
@@ -49,6 +49,7 @@ const migrations = [
   '001_create_users.sql',
   '004_create_projects.sql',
   '005_create_tasks.sql',
+  '008_create_project_meetings.sql',
 ];
 
 // Get all SQL files from migrations directory
