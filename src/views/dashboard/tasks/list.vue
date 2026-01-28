@@ -61,26 +61,29 @@
       </div>
 
       <!-- Pagination -->
-      <div v-if="totalPages > 1" class="flex justify-center items-center gap-2 mt-4 pb-4">
-        <button
-          @click="goToPage(currentPage - 1)"
-          :disabled="currentPage === 1"
-          class="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          <i class="fas fa-chevron-left"></i>
-        </button>
-        
-        <span class="px-4 py-2 text-sm text-gray-700">
-          Page {{ currentPage }} of {{ totalPages }}
-        </span>
-        
-        <button
-          @click="goToPage(currentPage + 1)"
-          :disabled="currentPage === totalPages"
-          class="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          <i class="fas fa-chevron-right"></i>
-        </button>
+      <div v-if="totalTasks > 0" class="flex flex-col items-center gap-2 mt-4 pb-4">
+        <div class="text-sm text-gray-500">
+          Showing {{ taskStore.from ?? 0 }}–{{ taskStore.to ?? 0 }} of {{ totalTasks }}
+        </div>
+        <div v-if="totalPages > 1" class="flex items-center gap-2">
+          <button
+            @click="goToPage(currentPage - 1)"
+            :disabled="currentPage === 1"
+            class="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            <i class="fas fa-chevron-left"></i>
+          </button>
+          <span class="px-4 py-2 text-sm text-gray-700">
+            Page {{ currentPage }} of {{ totalPages }}
+          </span>
+          <button
+            @click="goToPage(currentPage + 1)"
+            :disabled="currentPage === totalPages"
+            class="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -101,7 +104,7 @@
     <!-- Full Task Form Modal -->
     <div
       v-if="showTaskFormModal"
-      class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+      class="fixed inset-0 bg-[rgba(0,0,0,0.5)] bg-opacity-50 z-50 flex items-center justify-center p-4"
       @click.self="showTaskFormModal = false"
     >
       <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -117,8 +120,8 @@
 
         <div class="p-6">
           <TaskForm
-            :loading="taskStore.loading"
-            :error="taskStore.error"
+            :loading="createLoading || taskStore.loading"
+            :error="createError || taskStore.error"
             submit-text="Create"
             @submit="handleCreateTask"
             @cancel="showTaskFormModal = false"
@@ -148,6 +151,8 @@ export default {
     return {
       showFilterModal: false,
       showTaskFormModal: false,
+      createLoading: false,
+      createError: '',
     }
   },
   computed: {
@@ -173,7 +178,7 @@ export default {
       return this.taskStore.currentPage
     },
     totalPages() {
-      return Math.ceil(this.totalTasks / this.taskStore.pageSize)
+      return this.taskStore.lastPage
     },
     filters() {
       return this.taskStore.filters
@@ -187,15 +192,20 @@ export default {
       return count
     },
   },
+  watch: {
+    showTaskFormModal(isOpen) {
+      if (isOpen) this.createError = ''
+    },
+  },
   async mounted() {
     await this.fetchTasks()
   },
   methods: {
-    async fetchTasks(forceRefresh = false) {
-      await this.taskStore.fetchTasks(forceRefresh, this.currentPage)
+    async fetchTasks(forceRefresh = false, page = undefined) {
+      await this.taskStore.fetchTasks(forceRefresh, page ?? this.taskStore.currentPage)
     },
     async handleQuickAdd(data) {
-      const result = await this.taskStore.fastCreateTask(data.projectId, data.title)
+      const result = await this.taskStore.fastCreateTask(data.projectId, data.title, data.projectMeetingId || null)
       if (result.success) {
         await this.fetchTasks(true)
       } else {
@@ -203,12 +213,35 @@ export default {
       }
     },
     async handleCreateTask(taskData) {
-      const result = await this.taskStore.createTask(taskData)
-      if (result.success) {
+      if (taskData.batch && Array.isArray(taskData.items) && taskData.items.length > 0) {
+        this.createLoading = true
+        this.createError = ''
+        const shared = taskData.shared || {}
+        for (const item of taskData.items) {
+          const payload = {
+            ...shared,
+            title: item.title,
+            description: item.description ?? null,
+          }
+          const result = await this.taskStore.createTask(payload)
+          if (!result.success) {
+            this.createError = result.error || 'Failed to create task'
+            this.createLoading = false
+            return
+          }
+        }
+        this.createLoading = false
+        this.createError = ''
         this.showTaskFormModal = false
         await this.fetchTasks(true)
       } else {
-        alert(result.error || 'Failed to create task')
+        const result = await this.taskStore.createTask(taskData)
+        if (result.success) {
+          this.showTaskFormModal = false
+          await this.fetchTasks(true)
+        } else {
+          alert(result.error || 'Failed to create task')
+        }
       }
     },
     async handleStartTask(taskId) {

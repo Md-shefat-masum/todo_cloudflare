@@ -76,21 +76,38 @@ export default {
       this.createLoading = true
       this.createError = ''
 
-      // Add parentTaskId to the task data
+      if (taskData.batch && Array.isArray(taskData.items) && taskData.items.length > 0) {
+        const shared = { ...(taskData.shared || {}), parentTaskId: this.taskId }
+        for (const item of taskData.items) {
+          const payload = {
+            ...shared,
+            title: item.title,
+            description: item.description ?? null,
+          }
+          const result = await this.taskStore.createTask(payload)
+          if (!result.success) {
+            this.createError = result.error || 'Failed to create subtask'
+            this.createLoading = false
+            return
+          }
+        }
+        this.createLoading = false
+        this.$router.push({ name: 'task-subtasks', params: { id: this.taskId } })
+        return
+      }
+
       const taskDataWithParent = {
         ...taskData,
         parentTaskId: this.taskId,
       }
-
       const result = await this.taskStore.createTask(taskDataWithParent)
 
       if (result.success) {
-        // Redirect to subtasks list
         this.$router.push({ name: 'task-subtasks', params: { id: this.taskId } })
       } else {
         this.createError = result.error || 'Failed to create subtask'
-        this.createLoading = false
       }
+      this.createLoading = false
     },
     handleCancel() {
       this.$router.push({ name: 'task-subtasks', params: { id: this.taskId } })
