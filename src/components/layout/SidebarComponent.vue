@@ -61,8 +61,9 @@ export default {
         { name: 'dashboard', label: 'Home', to: '/dashboard', icon: 'fa-home' },
         { name: 'profile', label: 'Profile', to: '/profile', icon: 'fa-user' },
         { name: 'project', label: 'Projects', to: '/projects', icon: 'fa-folder', disabled: false },
-        { name: 'tasks', label: 'Tasks', to: '/tasks', icon: 'fa-tasks', disabled: false },
         { name: 'meetings', label: 'Meetings', to: '/meetings', icon: 'fa-calendar-alt', disabled: false },
+        { name: 'tasks', label: 'Tasks', to: '/tasks', icon: 'fa-tasks', disabled: false },
+        { name: 'completed-tasks', label: 'Completed Tasks', to: '/completed-tasks', icon: 'fa-check-square', disabled: false },
       ],
     }
   },
@@ -112,6 +113,10 @@ export default {
       
       // For meetings routes, check if path starts with /meetings
       if (route === '/meetings' && this.$route.path.startsWith('/meetings')) {
+        return true
+      }
+
+      if (route === '/completed-tasks' && this.$route.path.startsWith('/completed-tasks')) {
         return true
       }
       
