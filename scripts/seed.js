@@ -2,7 +2,7 @@
 
 /**
  * Database Seed Script
- * Seeds the database with initial/demo data
+ * Drops all tables → creates tables from migrations → seeds demo data
  */
 
 import { execSync } from 'child_process';
@@ -16,66 +16,70 @@ const __dirname = dirname(__filename);
 const isRemote = process.argv.includes('--remote') || process.argv.includes('--prod');
 const env = isRemote ? 'remote' : 'local';
 const flag = isRemote ? '--remote' : '--local';
+const migrationsDir = join(__dirname, '../prisma/migrations');
+const projectRoot = join(__dirname, '..');
 
-console.log(`\n🌱 Seeding ${env} database...\n`);
+function run(cmd, inherit = false) {
+  return execSync(cmd, { cwd: projectRoot, stdio: inherit ? 'inherit' : 'pipe' });
+}
 
-// Step 1: Truncate tables (delete all data but keep table structure)
-console.log('🗑️  Step 1: Truncating tables...\n');
+console.log(`\n🌱 Seed ${env} database (drop → create → seed)\n`);
 
-const tablesToTruncate = [
-  { table: 'project_meetings', sql: 'DELETE FROM project_meetings;' },
-  { table: 'tasks', sql: 'DELETE FROM tasks;' },
-  { table: 'projects', sql: 'DELETE FROM projects;' },
-  { table: 'users', sql: "DELETE FROM users;" },
-];
+// Step 1: Drop all tables (dependents first)
+console.log('🗑️  Step 1: Dropping all tables...\n');
 
-for (const { table, sql } of tablesToTruncate) {
+const tablesToDrop = ['project_meetings', 'tasks', 'projects', 'users'];
+
+for (const table of tablesToDrop) {
   try {
-    execSync(
-      `npx wrangler d1 execute todo ${flag} --command="${sql}"`,
-      { stdio: 'pipe', cwd: join(__dirname, '..') }
-    );
-    console.log(`   ✅ Truncated table: ${table}`);
-  } catch (error) {
-    console.error(`   ⚠️  Error truncating ${table}:`, error.message);
+    run(`npx wrangler d1 execute todo ${flag} --command="DROP TABLE IF EXISTS ${table};"`);
+    console.log(`   ✅ Dropped: ${table}`);
+  } catch (e) {
+    console.log(`   ⚠️  ${table} (skip)`);
   }
 }
 
-console.log('✅ Table truncation process completed\n');
+console.log('✅ Drop completed\n');
 
-// Step 2: Insert seed data
-console.log('📦 Step 2: Inserting seed data...\n');
+// Step 2: Create tables from migrations
+console.log('📦 Step 2: Creating tables...\n');
 
-const seedFiles = [
-  '007_add_demo_data.sql',
-  '009_add_meeting_seed.sql',
+const createMigrations = [
+  '001_create_users.sql',
+  '004_create_projects.sql',
+  '005_create_tasks.sql',
+  '008_create_project_meetings.sql',
 ];
 
-let successCount = 0;
-let failCount = 0;
-
-for (const seedFile of seedFiles) {
-  const seedPath = join(__dirname, '../prisma/migrations', seedFile);
-  console.log(`📄 Running: ${seedFile}`);
-  
+for (const m of createMigrations) {
+  const p = join(migrationsDir, m);
+  console.log(`📄 ${m}`);
   try {
-    execSync(
-      `npx wrangler d1 execute todo ${flag} --file=${seedPath}`,
-      { stdio: 'inherit', cwd: join(__dirname, '..') }
-    );
-    console.log(`✅ ${seedFile} completed\n`);
-    successCount++;
-  } catch (error) {
-    console.error(`❌ ${seedFile} failed:`, error.message);
-    failCount++;
+    run(`npx wrangler d1 execute todo ${flag} --file=${p}`, true);
+    console.log(`✅ ${m} done\n`);
+  } catch (e) {
+    console.error(`❌ ${m} failed:`, e.message);
+    process.exit(1);
   }
 }
 
-console.log(`\n📊 Seed Summary:`);
-console.log(`   ✅ Successful: ${successCount}`);
-console.log(`   ❌ Failed: ${failCount}`);
-console.log(`\n✨ Seeding completed!\n`);
+console.log('✅ Create completed\n');
 
-if (failCount > 0) {
-  process.exit(1);
+// Step 3: Seed data (007 = users/projects/tasks, 009 = meetings)
+console.log('🌱 Step 3: Seeding data...\n');
+
+const seedFiles = ['007_add_demo_data.sql', '009_add_meeting_seed.sql'];
+
+for (const f of seedFiles) {
+  const p = join(migrationsDir, f);
+  console.log(`📄 ${f}`);
+  try {
+    run(`npx wrangler d1 execute todo ${flag} --file=${p}`, true);
+    console.log(`✅ ${f} done\n`);
+  } catch (e) {
+    console.error(`❌ ${f} failed:`, e.message);
+    process.exit(1);
+  }
 }
+
+console.log('✨ Seed completed.\n');
