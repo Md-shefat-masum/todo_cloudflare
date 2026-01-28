@@ -1,7 +1,7 @@
 <template>
   <div
     v-if="isOpen"
-    class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end md:items-center justify-center"
+    class="fixed inset-0 bg-[rgba(0,0,0,0.5)] bg-opacity-50 z-50 flex items-end md:items-center justify-center"
     @click.self="close"
   >
     <div
