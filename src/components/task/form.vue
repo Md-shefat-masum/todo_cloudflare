@@ -1,31 +1,89 @@
 <template>
   <form @submit.prevent="handleSubmit" class="space-y-4">
-    <div>
-      <label for="title" class="block text-sm font-medium text-gray-700 mb-1">
-        Title <span class="text-red-500">*</span>
-      </label>
-      <input
-        id="title"
-        v-model="formData.title"
-        type="text"
-        required
-        class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-        placeholder="Enter task title"
-      />
-      <p v-if="errors.title" class="mt-1 text-sm text-red-600">{{ errors.title }}</p>
+    <!-- Create mode: multiple task items (title + description) with add more / delete -->
+    <div v-if="isCreateMode" class="task_list_wrapper space-y-4">
+      <div
+        v-for="(item, index) in taskItems"
+        :key="item._id"
+        class="task_list_item relative rounded-lg border border-gray-200 bg-gray-50/50 p-4"
+      >
+        <button
+          type="button"
+          class="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded transition-colors"
+          :class="taskItems.length <= 1 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-400 hover:text-red-600 hover:bg-red-50'"
+          :disabled="taskItems.length <= 1"
+          :title="taskItems.length <= 1 ? 'Keep at least one task' : 'Remove task'"
+          @click="removeTaskItem(index)"
+        >
+          <i class="fas fa-trash-alt text-sm"></i>
+        </button>
+        <div class="pr-10">
+          <label :for="`title-${item._id}`" class="block text-sm font-medium text-gray-700 mb-1">
+            Title <span class="text-red-500">*</span>
+          </label>
+          <input
+            :id="`title-${item._id}`"
+            v-model="item.title"
+            type="text"
+            class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            placeholder="Enter task title"
+          />
+          <p v-if="errors[`title-${item._id}`]" class="mt-1 text-sm text-red-600">{{ errors[`title-${item._id}`] }}</p>
+        </div>
+        <div class="mt-3">
+          <label :for="`description-${item._id}`" class="block text-sm font-medium text-gray-700 mb-1">
+            Description
+          </label>
+          <textarea
+            :id="`description-${item._id}`"
+            v-model="item.description"
+            rows="3"
+            class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            placeholder="Enter task description (optional)"
+          ></textarea>
+        </div>
+      </div>
+      <div>
+        <button
+          type="button"
+          class="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md transition-colors border border-blue-200"
+          @click="addTaskItem"
+        >
+          <i class="fas fa-plus mr-2"></i>Add more task
+        </button>
+      </div>
     </div>
 
-    <div>
-      <label for="description" class="block text-sm font-medium text-gray-700 mb-1">
-        Description
-      </label>
-      <textarea
-        id="description"
-        v-model="formData.description"
-        rows="3"
-        class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-        placeholder="Enter task description (optional)"
-      ></textarea>
+    <!-- Edit mode: single task (title + description) -->
+    <div v-else class="task_list_wrapper">
+      <div class="task_list_item">
+        <div>
+          <label for="title" class="block text-sm font-medium text-gray-700 mb-1">
+            Title <span class="text-red-500">*</span>
+          </label>
+          <input
+            id="title"
+            v-model="formData.title"
+            type="text"
+            required
+            class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            placeholder="Enter task title"
+          />
+          <p v-if="errors.title" class="mt-1 text-sm text-red-600">{{ errors.title }}</p>
+        </div>
+        <div>
+          <label for="description" class="block text-sm font-medium text-gray-700 mb-1">
+            Description
+          </label>
+          <textarea
+            id="description"
+            v-model="formData.description"
+            rows="3"
+            class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            placeholder="Enter task description (optional)"
+          ></textarea>
+        </div>
+      </div>
     </div>
 
     <div class="grid grid-cols-2 gap-4">
@@ -36,6 +94,7 @@
         <select
           id="projectId"
           v-model="formData.projectId"
+          @change="handleProjectChange"
           :disabled="isSubtask"
           class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
         >
@@ -49,6 +108,25 @@
         </p>
       </div>
 
+      <div v-if="formData.projectId">
+        <label for="projectMeetingId" class="block text-sm font-medium text-gray-700 mb-1">
+          Meeting
+        </label>
+        <select
+          id="projectMeetingId"
+          v-model="formData.projectMeetingId"
+          :disabled="loadingMeetings"
+          class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none disabled:bg-gray-100 disabled:cursor-wait"
+        >
+          <option :value="null">{{ loadingMeetings ? 'Loading...' : 'No Meeting' }}</option>
+          <option v-for="meeting in projectMeetings" :key="meeting.id" :value="meeting.id">
+            {{ meeting.title }}
+          </option>
+        </select>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4">
       <div>
         <label for="priority" class="block text-sm font-medium text-gray-700 mb-1">
           Priority
@@ -64,23 +142,22 @@
           <option value="urgent">Urgent</option>
         </select>
       </div>
-    </div>
-
-    <div>
-      <label for="taskStatus" class="block text-sm font-medium text-gray-700 mb-1">
-        Status
-      </label>
-      <select
-        id="taskStatus"
-        v-model="formData.taskStatus"
-        class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-      >
-        <option value="pending">Pending</option>
-        <option value="in_progress">In Progress</option>
-        <option value="completed">Completed</option>
-        <option value="failed">Failed</option>
-        <option value="hold">Hold</option>
-      </select>
+      <div>
+        <label for="taskStatus" class="block text-sm font-medium text-gray-700 mb-1">
+          Status
+        </label>
+        <select
+          id="taskStatus"
+          v-model="formData.taskStatus"
+          class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+        >
+          <option value="pending">Pending</option>
+          <option value="in_progress">In Progress</option>
+          <option value="completed">Completed</option>
+          <option value="failed">Failed</option>
+          <option value="hold">Hold</option>
+        </select>
+      </div>
     </div>
 
     <div class="grid grid-cols-2 gap-4">
@@ -134,7 +211,10 @@
       ></textarea>
     </div>
 
-    <div v-if="error" class="text-red-600 text-sm bg-red-50 p-3 rounded-md">
+    <div v-if="errors._form" class="text-red-600 text-sm bg-red-50 p-3 rounded-md">
+      {{ errors._form }}
+    </div>
+    <div v-else-if="error" class="text-red-600 text-sm bg-red-50 p-3 rounded-md">
       {{ error }}
     </div>
 
@@ -163,6 +243,7 @@
 <script>
 import { useProjectStore } from '@stores/project'
 import { useTaskStore } from '@stores/task'
+import { useMeetingStore } from '@stores/meeting'
 
 export default {
   name: 'TaskForm',
@@ -199,6 +280,7 @@ export default {
         title: '',
         description: '',
         projectId: null,
+        projectMeetingId: null,
         priority: 'mid',
         taskStatus: 'pending',
         submissionDate: '',
@@ -206,8 +288,12 @@ export default {
         completionDate: '',
         comment: '',
       },
+      taskItems: [],
+      taskItemNextId: 0,
       errors: {},
       parentTask: null,
+      projectMeetings: [],
+      loadingMeetings: false,
     }
   },
   computed: {
@@ -217,11 +303,17 @@ export default {
     taskStore() {
       return useTaskStore()
     },
+    meetingStore() {
+      return useMeetingStore()
+    },
     projects() {
       return this.projectStore.projects || []
     },
     isSubtask() {
       return this.parentTaskId !== null && this.parentTaskId !== undefined
+    },
+    isCreateMode() {
+      return !this.task
     },
   },
   watch: {
@@ -251,6 +343,7 @@ export default {
             title: newTask.title || '',
             description: newTask.description || '',
             projectId: newTask.projectId || null,
+            projectMeetingId: newTask.projectMeetingId || null,
             priority: newTask.priority || 'mid',
             taskStatus: newTask.taskStatus || 'pending',
             submissionDate: this.formatDateTimeLocal(newTask.submissionDate),
@@ -258,16 +351,19 @@ export default {
             completionDate: this.formatDateTimeLocal(newTask.completionDate),
             comment: newTask.comment || '',
           }
+          this.taskItems = []
+          if (this.formData.projectId) {
+            this.fetchMeetingsByProject()
+          }
         } else {
-          // If creating new subtask, inherit projectId from parent
-          const inheritedProjectId = this.isSubtask && this.parentTask 
-            ? this.parentTask.projectId || null 
+          const inheritedProjectId = this.isSubtask && this.parentTask
+            ? this.parentTask.projectId || null
             : null
-          
           this.formData = {
             title: '',
             description: '',
             projectId: inheritedProjectId,
+            projectMeetingId: null,
             priority: 'mid',
             taskStatus: 'pending',
             submissionDate: '',
@@ -275,6 +371,22 @@ export default {
             completionDate: '',
             comment: '',
           }
+          this.taskItems = [this.newTaskItem()]
+          if (inheritedProjectId) {
+            this.fetchMeetingsByProject()
+          }
+        }
+      },
+    },
+    'formData.projectId': {
+      handler(newProjectId) {
+        // Fetch meetings when project is set (e.g. from task load or parent); do NOT reset meeting here
+        // (meeting is only reset in handleProjectChange when user changes project)
+        if (newProjectId) {
+          this.fetchMeetingsByProject()
+        } else {
+          this.formData.projectMeetingId = null
+          this.projectMeetings = []
         }
       },
     },
@@ -303,6 +415,36 @@ export default {
         console.error('Error fetching parent task:', error)
       }
     },
+    async fetchMeetingsByProject() {
+      if (!this.formData.projectId) {
+        this.projectMeetings = []
+        return
+      }
+
+      this.loadingMeetings = true
+      try {
+        // Set filter and fetch meetings
+        this.meetingStore.setFilters({ projectId: this.formData.projectId })
+        const result = await this.meetingStore.fetchMeetings(true)
+        
+        if (result.success) {
+          // Sort by id desc as requested
+          this.projectMeetings = result.data.sort((a, b) => b.id - a.id)
+        } else {
+          this.projectMeetings = []
+        }
+      } catch (error) {
+        console.error('Error fetching meetings:', error)
+        this.projectMeetings = []
+      } finally {
+        this.loadingMeetings = false
+      }
+    },
+    handleProjectChange() {
+      // Reset meeting when project changes
+      this.formData.projectMeetingId = null
+      this.fetchMeetingsByProject()
+    },
     formatDateTimeLocal(dateString) {
       if (!dateString) return ''
       const date = new Date(dateString)
@@ -317,32 +459,53 @@ export default {
       
       return `${year}-${month}-${day}T${hours}:${minutes}`
     },
+    newTaskItem() {
+      this.taskItemNextId += 1
+      return { _id: this.taskItemNextId, title: '', description: '' }
+    },
+    addTaskItem() {
+      this.taskItems.push(this.newTaskItem())
+    },
+    removeTaskItem(index) {
+      if (this.taskItems.length <= 1) return
+      this.taskItems.splice(index, 1)
+    },
     validate() {
       this.errors = {}
-      
+
+      if (this.isCreateMode) {
+        if (!this.taskItems.length) {
+          this.errors._form = 'Add at least one task.'
+          return false
+        }
+        let valid = true
+        for (const item of this.taskItems) {
+          const key = `title-${item._id}`
+          if (!item.title || !String(item.title).trim()) {
+            this.errors[key] = 'Title is required'
+            valid = false
+          }
+        }
+        return valid
+      }
+
       if (!this.formData.title || this.formData.title.trim() === '') {
         this.errors.title = 'Title is required'
         return false
       }
-
       return true
     },
     handleSubmit() {
-      if (!this.validate()) {
-        return
-      }
+      if (!this.validate()) return
 
-      // Prepare data for submission
-      // For subtasks, use parent's projectId if not explicitly set
       let projectId = this.formData.projectId || null
       if (this.isSubtask && this.parentTask && !projectId) {
         projectId = this.parentTask.projectId || null
       }
-      
-      const submitData = {
-        title: this.formData.title.trim(),
-        description: this.formData.description?.trim() || null,
-        projectId: projectId,
+
+      const shared = {
+        projectId,
+        projectMeetingId: this.formData.projectMeetingId || null,
         parentTaskId: this.parentTaskId || null,
         priority: this.formData.priority,
         taskStatus: this.formData.taskStatus,
@@ -352,6 +515,20 @@ export default {
         comment: this.formData.comment?.trim() || null,
       }
 
+      if (this.isCreateMode) {
+        const items = this.taskItems.map((item) => ({
+          title: String(item.title).trim(),
+          description: item.description ? String(item.description).trim() : null,
+        }))
+        this.$emit('submit', { batch: true, items, shared })
+        return
+      }
+
+      const submitData = {
+        title: this.formData.title.trim(),
+        description: this.formData.description?.trim() || null,
+        ...shared,
+      }
       this.$emit('submit', submitData)
     },
   },
