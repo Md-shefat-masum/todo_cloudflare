@@ -15,71 +15,117 @@ function calculateDuration(startDate, endDate) {
 }
 
 /**
- * List all tasks with optional filters
+ * List tasks with optional filters, pagination, and show_all.
+ * When show_all is true, returns all matching tasks; otherwise 20 per page.
+ *
  * @param {PrismaClient} prisma - Prisma client instance
- * @param {Object} filters - Filter options (projectId, assignedTo, taskStatus, priority)
- * @returns {Promise<Array>} Array of tasks
+ * @param {Object} filters - projectId, assignedTo, taskStatus, priority, parentTaskId, from_date, to_date, show_all, page, per_page
+ * @returns {Promise<Object>} { success, data, total, page, per_page, lastPage, from, to } or { success: false, error }
  */
 export async function listTasks(prisma, filters = {}) {
 	try {
 		const where = {};
-		
-		// By default, only show top-level tasks (no parent)
+
 		if (filters.parentTaskId === undefined) {
 			where.parentTaskId = null;
 		} else if (filters.parentTaskId !== null) {
 			where.parentTaskId = parseInt(filters.parentTaskId);
 		}
-		// If parentTaskId is explicitly null in filters, don't add it to where clause (show all tasks)
-		
-		if (filters.projectId !== undefined) {
-			where.projectId = filters.projectId;
+		if (filters.projectId !== undefined) where.projectId = filters.projectId;
+		if (filters.assignedTo !== undefined) where.assignedTo = filters.assignedTo;
+		if (filters.taskStatus !== undefined) where.taskStatus = filters.taskStatus;
+		if (filters.priority !== undefined) where.priority = filters.priority;
+
+		const hasDateRange = filters.from_date != null && filters.to_date != null &&
+			String(filters.from_date).trim() !== '' && String(filters.to_date).trim() !== '';
+		if (hasDateRange) {
+			const fromStart = new Date(filters.from_date);
+			fromStart.setHours(0, 0, 0, 0);
+			const toEnd = new Date(filters.to_date);
+			toEnd.setHours(23, 59, 59, 999);
+			where.completionDate = { gte: fromStart, lte: toEnd };
 		}
-		
-		if (filters.assignedTo !== undefined) {
-			where.assignedTo = filters.assignedTo;
-		}
-		
-		if (filters.taskStatus !== undefined) {
-			where.taskStatus = filters.taskStatus;
-		}
-		
-		if (filters.priority !== undefined) {
-			where.priority = filters.priority;
-		}
-		
-		const tasks = await prisma.task.findMany({
-			where,
-			orderBy: { createdAt: 'desc' },
-			include: {
-				subtasks: {
-					select: {
-						id: true,
-						taskStatus: true,
+
+		const orderBy = hasDateRange ? { submissionDate: 'asc' } : { createdAt: 'desc' };
+		const showAll = filters.show_all === true || filters.show_all === '1' || filters.show_all === 1;
+		const perPage = Math.max(1, parseInt(filters.per_page, 10) || 20);
+		const page = Math.max(1, parseInt(filters.page, 10) || 1);
+
+		let tasks;
+		let total;
+
+		if (showAll) {
+			tasks = await prisma.task.findMany({
+				where,
+				orderBy,
+				include: {
+					subtasks: {
+						select: { id: true, taskStatus: true },
 					},
 				},
-			},
-		});
-		
-		// Add subtask counts to each task
+			});
+			total = tasks.length;
+		} else {
+			total = await prisma.task.count({ where });
+			const skip = (page - 1) * perPage;
+			tasks = await prisma.task.findMany({
+				where,
+				orderBy,
+				skip,
+				take: perPage,
+				include: {
+					subtasks: {
+						select: { id: true, taskStatus: true },
+					},
+				},
+			});
+		}
+
+		const projectIds = [...new Set(tasks.map(t => t.projectId).filter(Boolean))];
+		const meetingIds = [...new Set(tasks.map(t => t.projectMeetingId).filter(Boolean))];
+		const [projects, meetings] = await Promise.all([
+			projectIds.length > 0
+				? prisma.project.findMany({ where: { id: { in: projectIds } }, select: { id: true, title: true } })
+				: [],
+			meetingIds.length > 0
+				? prisma.meeting.findMany({ where: { id: { in: meetingIds } }, select: { id: true, title: true } })
+				: [],
+		]);
+		const projectById = new Map(projects.map(p => [p.id, p.title]));
+		const meetingById = new Map(meetings.map(m => [m.id, m.title]));
+
 		const tasksWithCounts = tasks.map(task => {
 			const subtasks = task.subtasks || [];
 			const completedSubtasks = subtasks.filter(st => st.taskStatus === 'completed').length;
 			const incompletedSubtasks = subtasks.length - completedSubtasks;
-			const completionPercent = subtasks.length > 0 
+			const completionPercent = subtasks.length > 0
 				? Math.round((completedSubtasks / subtasks.length) * 100)
 				: 0;
-			
 			return {
 				...task,
 				totalSubTasks: subtasks.length,
 				completedSubTasks: completedSubtasks,
 				incompletedSubTasks: incompletedSubtasks,
-				completionPercent: completionPercent,
+				completionPercent,
+				projectName: task.projectId ? (projectById.get(task.projectId) ?? null) : null,
+				meetingName: task.projectMeetingId ? (meetingById.get(task.projectMeetingId) ?? null) : null,
 			};
 		});
-		
-		return { success: true, data: tasksWithCounts };
+
+		const lastPage = showAll ? 1 : Math.max(1, Math.ceil(total / perPage));
+		const from = total === 0 ? null : (page - 1) * perPage + 1;
+		const to = total === 0 ? null : Math.min(page * perPage, total);
+
+		return {
+			success: true,
+			data: tasksWithCounts,
+			total,
+			page: showAll ? 1 : page,
+			per_page: perPage,
+			lastPage,
+			from,
+			to,
+		};
 	} catch (error) {
 		console.error('Error listing tasks:', error);
 		return { success: false, error: error.message };
@@ -107,7 +153,31 @@ export async function getTaskById(prisma, id) {
 			return { success: false, error: 'Task not found', statusCode: 404 };
 		}
 
-		return { success: true, data: task };
+		let projectName = null;
+		let meetingName = null;
+		if (task.projectId) {
+			const project = await prisma.project.findUnique({
+				where: { id: task.projectId },
+				select: { title: true },
+			});
+			projectName = project?.title ?? null;
+		}
+		if (task.projectMeetingId) {
+			const meeting = await prisma.meeting.findUnique({
+				where: { id: task.projectMeetingId },
+				select: { title: true },
+			});
+			meetingName = meeting?.title ?? null;
+		}
+
+		return {
+			success: true,
+			data: {
+				...task,
+				projectName,
+				meetingName,
+			},
+		};
 	} catch (error) {
 		console.error('Error getting task:', error);
 		return { success: false, error: error.message };
@@ -155,10 +225,10 @@ export async function getSubtasks(prisma, parentTaskId) {
 			const subSubtasks = task.subtasks || [];
 			const completedSubtasks = subSubtasks.filter(st => st.taskStatus === 'completed').length;
 			const incompletedSubtasks = subSubtasks.length - completedSubtasks;
-			const completionPercent = subSubtasks.length > 0 
+			const completionPercent = subSubtasks.length > 0
 				? Math.round((completedSubtasks / subSubtasks.length) * 100)
 				: 0;
-			
+
 			return {
 				...task,
 				totalSubTasks: subSubtasks.length,
@@ -187,6 +257,7 @@ export async function createTask(prisma, taskData) {
 			title,
 			description,
 			projectId,
+			projectMeetingId,
 			parentTaskId,
 			priority = 'mid',
 			taskStatus = 'pending',
@@ -199,10 +270,10 @@ export async function createTask(prisma, taskData) {
 
 		// Validation
 		if (!title) {
-			return { 
-				success: false, 
+			return {
+				success: false,
 				error: 'Title is required',
-				statusCode: 400 
+				statusCode: 400
 			};
 		}
 
@@ -233,10 +304,10 @@ export async function createTask(prisma, taskData) {
 			});
 
 			if (!project) {
-				return { 
-					success: false, 
+				return {
+					success: false,
 					error: 'Project not found',
-					statusCode: 404 
+					statusCode: 404
 				};
 			}
 		}
@@ -248,10 +319,10 @@ export async function createTask(prisma, taskData) {
 			});
 
 			if (!user) {
-				return { 
-					success: false, 
+				return {
+					success: false,
 					error: 'Assigned user not found',
-					statusCode: 404 
+					statusCode: 404
 				};
 			}
 		}
@@ -263,10 +334,34 @@ export async function createTask(prisma, taskData) {
 			});
 
 			if (!parentTask) {
-				return { 
-					success: false, 
+				return {
+					success: false,
 					error: 'Parent task not found',
-					statusCode: 404 
+					statusCode: 404
+				};
+			}
+		}
+
+		// Verify meeting exists if projectMeetingId is provided
+		if (projectMeetingId) {
+			const meeting = await prisma.meeting.findUnique({
+				where: { id: projectMeetingId },
+			});
+
+			if (!meeting) {
+				return {
+					success: false,
+					error: 'Meeting not found',
+					statusCode: 404
+				};
+			}
+
+			// Verify meeting belongs to the same project if projectId is also provided
+			if (projectId && meeting.projectId !== projectId) {
+				return {
+					success: false,
+					error: 'Meeting does not belong to the selected project',
+					statusCode: 400
 				};
 			}
 		}
@@ -285,10 +380,11 @@ export async function createTask(prisma, taskData) {
 				title,
 				description: description || null,
 				projectId: projectId || null,
+				projectMeetingId: projectMeetingId || null,
 				parentTaskId: parentTaskId || null,
 				priority,
 				taskStatus,
-				submissionDate: submissionDate ? new Date(submissionDate) : null,
+				submissionDate: submissionDate ? new Date(submissionDate) : new Date(),
 				executionDate: executionDate ? new Date(executionDate) : null,
 				completionDate: completionDate ? new Date(completionDate) : null,
 				totalDuration,
@@ -336,6 +432,7 @@ export async function updateTask(prisma, id, taskData) {
 		if (taskData.title !== undefined) updateData.title = taskData.title;
 		if (taskData.description !== undefined) updateData.description = taskData.description || null;
 		if (taskData.projectId !== undefined) updateData.projectId = taskData.projectId || null;
+		if (taskData.projectMeetingId !== undefined) updateData.projectMeetingId = taskData.projectMeetingId || null;
 		if (taskData.parentTaskId !== undefined) {
 			// Prevent circular reference
 			if (taskData.parentTaskId === taskId) {
@@ -386,7 +483,7 @@ export async function updateTask(prisma, id, taskData) {
 		}
 
 		// Recalculate total duration if execution and completion dates are both set
-		const execDate = updateData.executionDate !== undefined 
+		const execDate = updateData.executionDate !== undefined
 			? (updateData.executionDate || existingTask.executionDate)
 			: existingTask.executionDate;
 		const compDate = updateData.completionDate !== undefined
@@ -399,7 +496,7 @@ export async function updateTask(prisma, id, taskData) {
 			const executionDate = updateData.executionDate !== undefined
 				? (updateData.executionDate || existingTask.executionDate)
 				: existingTask.executionDate;
-			
+
 			if (executionDate) {
 				// Calculate duration in minutes from execution to completion
 				updateData.totalDuration = calculateDuration(
@@ -425,10 +522,10 @@ export async function updateTask(prisma, id, taskData) {
 			});
 
 			if (!project) {
-				return { 
-					success: false, 
+				return {
+					success: false,
 					error: 'Project not found',
-					statusCode: 404 
+					statusCode: 404
 				};
 			}
 		}
@@ -440,10 +537,10 @@ export async function updateTask(prisma, id, taskData) {
 			});
 
 			if (!user) {
-				return { 
-					success: false, 
+				return {
+					success: false,
 					error: 'Assigned user not found',
-					statusCode: 404 
+					statusCode: 404
 				};
 			}
 		}
@@ -455,10 +552,38 @@ export async function updateTask(prisma, id, taskData) {
 			});
 
 			if (!parentTask) {
-				return { 
-					success: false, 
+				return {
+					success: false,
 					error: 'Parent task not found',
-					statusCode: 404 
+					statusCode: 404
+				};
+			}
+		}
+
+		// Verify meeting exists if projectMeetingId is being updated
+		if (updateData.projectMeetingId !== undefined && updateData.projectMeetingId) {
+			const meeting = await prisma.meeting.findUnique({
+				where: { id: updateData.projectMeetingId },
+			});
+
+			if (!meeting) {
+				return {
+					success: false,
+					error: 'Meeting not found',
+					statusCode: 404
+				};
+			}
+
+			// Verify meeting belongs to the same project if projectId is also being updated
+			const projectIdToCheck = updateData.projectId !== undefined
+				? updateData.projectId
+				: existingTask.projectId;
+
+			if (projectIdToCheck && meeting.projectId !== projectIdToCheck) {
+				return {
+					success: false,
+					error: 'Meeting does not belong to the selected project',
+					statusCode: 400
 				};
 			}
 		}
@@ -473,10 +598,10 @@ export async function updateTask(prisma, id, taskData) {
 		console.error('Error updating task:', error);
 
 		if (error.code === 'P2025') {
-			return { 
-				success: false, 
+			return {
+				success: false,
 				error: 'Task not found',
-				statusCode: 404 
+				statusCode: 404
 			};
 		}
 
@@ -515,10 +640,10 @@ export async function deleteTask(prisma, id) {
 		console.error('Error deleting task:', error);
 
 		if (error.code === 'P2025') {
-			return { 
-				success: false, 
+			return {
+				success: false,
 				error: 'Task not found',
-				statusCode: 404 
+				statusCode: 404
 			};
 		}
 

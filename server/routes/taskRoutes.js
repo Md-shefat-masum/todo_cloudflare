@@ -51,17 +51,74 @@ export async function handleTaskRoutes(request, prisma, corsHeaders, env = {}) {
 				const parentTaskId = searchParams.get('parent_task_id');
 				filters.parentTaskId = parentTaskId === 'null' ? null : parseInt(parentTaskId);
 			}
-			
-			const result = await taskService.listTasks(prisma, filters);
-			
-			if (result.success) {
-				return Response.json({ tasks: result.data }, { headers: corsHeaders });
+
+			if (searchParams.has('from_date')) filters.from_date = searchParams.get('from_date');
+			if (searchParams.has('to_date')) filters.to_date = searchParams.get('to_date');
+			if (searchParams.has('show_all')) {
+				const v = searchParams.get('show_all');
+				filters.show_all = v === '1' || v === 'true';
 			}
-			
-			return Response.json(
-				{ error: result.error },
-				{ status: result.statusCode || 500, headers: corsHeaders }
-			);
+			if (searchParams.has('page')) filters.page = parseInt(searchParams.get('page'), 10) || 1;
+			if (searchParams.has('per_page')) filters.per_page = parseInt(searchParams.get('per_page'), 10) || 20;
+
+			const result = await taskService.listTasks(prisma, filters);
+
+			if (!result.success) {
+				return Response.json(
+					{ error: result.error },
+					{ status: result.statusCode || 500, headers: corsHeaders }
+				);
+			}
+
+			const base = new URL(request.url);
+			const path = `${base.origin}${base.pathname}`;
+			const page = result.page;
+			const lastPage = result.lastPage;
+			const total = result.total;
+			const perPage = result.per_page;
+
+			function pageUrl(p) {
+				const u = new URL(request.url);
+				u.searchParams.set('page', String(p));
+				return u.toString();
+			}
+
+			const links = [];
+			links.push({
+				url: page > 1 ? pageUrl(page - 1) : null,
+				label: '&laquo; Previous',
+				active: false,
+			});
+			for (let i = 1; i <= lastPage; i++) {
+				links.push({
+					url: pageUrl(i),
+					label: String(i),
+					active: i === page,
+				});
+			}
+			links.push({
+				url: page < lastPage ? pageUrl(page + 1) : null,
+				label: 'Next &raquo;',
+				active: false,
+			});
+
+			const payload = {
+				current_page: page,
+				data: result.data,
+				first_page_url: pageUrl(1),
+				from: result.from,
+				last_page: lastPage,
+				last_page_url: pageUrl(lastPage),
+				links,
+				next_page_url: page < lastPage ? pageUrl(page + 1) : null,
+				path,
+				per_page: perPage,
+				prev_page_url: page > 1 ? pageUrl(page - 1) : null,
+				to: result.to,
+				total,
+			};
+
+			return Response.json(payload, { headers: corsHeaders });
 		} catch (error) {
 			console.error('Task list error:', error);
 			return Response.json(
@@ -83,7 +140,7 @@ export async function handleTaskRoutes(request, prisma, corsHeaders, env = {}) {
 			}
 
 			const body = await request.json();
-			const { projectId, title } = body;
+			const { projectId, projectMeetingId, title } = body;
 
 			// Validation
 			if (!projectId || !title) {
@@ -97,6 +154,7 @@ export async function handleTaskRoutes(request, prisma, corsHeaders, env = {}) {
 			const result = await taskService.createTask(prisma, {
 				title,
 				projectId: parseInt(projectId),
+				projectMeetingId: projectMeetingId ? parseInt(projectMeetingId) : null,
 				assignedTo: userId,
 				priority: 'mid',
 				taskStatus: 'pending',
