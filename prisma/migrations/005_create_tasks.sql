@@ -2,6 +2,7 @@
 CREATE TABLE IF NOT EXISTS "tasks" (
     "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     "project_id" INTEGER,
+    "project_meeting_id" INTEGER,
     "parent_task_id" INTEGER,
     "title" TEXT NOT NULL,
     "description" TEXT,
@@ -19,6 +20,7 @@ CREATE TABLE IF NOT EXISTS "tasks" (
 
 -- Indexes for performance (as per plan.md)
 CREATE INDEX IF NOT EXISTS "idx_tasks_project_id" ON "tasks"("project_id");
+CREATE INDEX IF NOT EXISTS "idx_tasks_project_meeting_id" ON "tasks"("project_meeting_id");
 CREATE INDEX IF NOT EXISTS "idx_tasks_assigned_to" ON "tasks"("assigned_to");
 CREATE INDEX IF NOT EXISTS "idx_tasks_status" ON "tasks"("task_status");
 CREATE INDEX IF NOT EXISTS "idx_tasks_priority" ON "tasks"("priority");
