@@ -15,10 +15,16 @@
       </span>
     </div>
 
-    <p v-if="projectName" class="text-sm text-gray-500 mb-2">
-      <i class="fas fa-folder mr-1"></i>
-      {{ projectName }}
-    </p>
+    <div v-if="projectName || meetingName" class="text-sm text-gray-500 mb-2 space-y-1">
+      <p v-if="projectName">
+        <i class="fas fa-folder mr-1"></i>
+        {{ projectName }}
+      </p>
+      <p v-if="meetingName">
+        <i class="fas fa-calendar-alt mr-1"></i>
+        {{ meetingName }}
+      </p>
+    </div>
 
     <div class="flex justify-between items-center mt-2 text-xs">
       <span
@@ -62,7 +68,7 @@
         :title="`${task.totalSubTasks || 0} subtasks`"
       >
         <i class="fas fa-sitemap mr-1"></i>
-        Sub Tasks ({{ task.totalSubTasks || 0 }})
+        Sub Tasks ({{ task.totalSubTasks || 0 }}) ({{ task.completionPercent }}%)
       </button>
       
       <button
@@ -94,6 +100,7 @@
 
 <script>
 import { useProjectStore } from '@stores/project'
+import { useMeetingStore } from '@stores/meeting'
 
 export default {
   name: 'TaskCard',
@@ -107,10 +114,20 @@ export default {
     projectStore() {
       return useProjectStore()
     },
+    meetingStore() {
+      return useMeetingStore()
+    },
     projectName() {
+      if (this.task.projectName != null) return this.task.projectName
       if (!this.task.projectId) return null
       const project = this.projectStore.getProjectById(this.task.projectId)
-      return project?.title || null
+      return project?.title ?? null
+    },
+    meetingName() {
+      if (this.task.meetingName != null) return this.task.meetingName
+      if (!this.task.projectMeetingId) return null
+      const meeting = this.meetingStore.getMeetingById(this.task.projectMeetingId)
+      return meeting?.title ?? null
     },
     priorityClasses() {
       return {
@@ -170,10 +187,11 @@ export default {
     formatDate(dateString) {
       if (!dateString) return ''
       const date = new Date(dateString)
+      if (isNaN(date.getTime())) return ''
       return date.toLocaleDateString('en-US', {
         month: 'short',
         day: 'numeric',
-        year: date.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined,
+        year: 'numeric',
       })
     },
   },

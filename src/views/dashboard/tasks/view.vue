@@ -64,6 +64,10 @@
             <i class="fas fa-folder mr-1"></i>
             {{ projectName }}
           </span>
+          <span v-if="meetingName">
+            <i class="fas fa-calendar-alt mr-1"></i>
+            {{ meetingName }}
+          </span>
         </div>
       </div>
 
@@ -146,6 +150,7 @@
 <script>
 import { useTaskStore } from '@stores/task'
 import { useProjectStore } from '@stores/project'
+import { useMeetingStore } from '@stores/meeting'
 
 export default {
   name: 'TaskViewView',
@@ -165,13 +170,23 @@ export default {
     projectStore() {
       return useProjectStore()
     },
+    meetingStore() {
+      return useMeetingStore()
+    },
     task() {
       return this.taskStore.currentTask || this.taskStore.getTaskById(this.taskId)
     },
     projectName() {
+      if (this.task?.projectName != null) return this.task.projectName
       if (!this.task?.projectId) return null
       const project = this.projectStore.getProjectById(this.task.projectId)
-      return project?.title || null
+      return project?.title ?? null
+    },
+    meetingName() {
+      if (this.task?.meetingName != null) return this.task.meetingName
+      if (!this.task?.projectMeetingId) return null
+      const meeting = this.meetingStore.getMeetingById(this.task.projectMeetingId)
+      return meeting?.title ?? null
     },
     priorityClasses() {
       return {
@@ -196,6 +211,10 @@ export default {
     // Fetch projects if needed
     if (this.projectStore.projects.length === 0) {
       await this.projectStore.fetchProjects()
+    }
+    // Fetch meetings if needed
+    if (this.meetingStore.meetings.length === 0) {
+      await this.meetingStore.fetchMeetings()
     }
   },
   methods: {
