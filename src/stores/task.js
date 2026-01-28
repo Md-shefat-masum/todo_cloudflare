@@ -32,11 +32,14 @@ export const useTaskStore = defineStore('task', {
     lastFetch: null,
     cacheTimeout: 5 * 60 * 1000, // 5 minutes cache
     
-    // Pagination
+    // Pagination (server-side)
     currentPage: 1,
+    lastPage: 1,
     pageSize: 20,
     totalTasks: 0,
-    hasMore: false,
+    paginationLinks: [],
+    from: null,
+    to: null,
     
     // Filters
     filters: {
@@ -67,12 +70,9 @@ export const useTaskStore = defineStore('task', {
       return state.tasks.filter((task) => !state.deletedTaskIds.has(task.id))
     },
 
-    // Get paginated tasks
+    // Tasks for current page (excluding soft-deleted)
     paginatedTasks: (state) => {
-      const visible = state.tasks.filter((task) => !state.deletedTaskIds.has(task.id))
-      const start = (state.currentPage - 1) * state.pageSize
-      const end = start + state.pageSize
-      return visible.slice(start, end)
+      return state.tasks.filter((task) => !state.deletedTaskIds.has(task.id))
     },
 
     // Check if task is soft deleted
@@ -87,7 +87,6 @@ export const useTaskStore = defineStore('task', {
      * Uses caching for performance
      */
     async fetchTasks(forceRefresh = false, page = 1) {
-      // Return cached data if valid and not forcing refresh (only if same page and filters haven't changed)
       if (this.isCacheValid && !forceRefresh && this.tasks.length > 0 && page === this.currentPage) {
         return { success: true, data: this.paginatedTasks }
       }
@@ -97,34 +96,24 @@ export const useTaskStore = defineStore('task', {
       this.currentPage = page
 
       try {
-        // Build query parameters
         const params = new URLSearchParams()
+        params.append('page', String(page))
+        params.append('per_page', String(this.pageSize))
         if (this.filters.projectId) params.append('project_id', this.filters.projectId)
         if (this.filters.assignedTo) params.append('assigned_to', this.filters.assignedTo)
         if (this.filters.taskStatus) params.append('task_status', this.filters.taskStatus)
         if (this.filters.priority) params.append('priority', this.filters.priority)
 
-        const queryString = params.toString()
-        const url = `/task${queryString ? `?${queryString}` : ''}`
-        
-        const response = await api.get(url)
-        const allTasks = response.data.tasks || []
-        
-        // Filter out soft deleted tasks
-        const visibleTasks = allTasks.filter((task) => !this.deletedTaskIds.has(task.id))
-        
-        // Sort by created_at DESC (latest first)
-        visibleTasks.sort((a, b) => {
-          const dateA = new Date(a.createdAt || 0)
-          const dateB = new Date(b.createdAt || 0)
-          return dateB - dateA
-        })
-        
-        this.tasks = visibleTasks
-        this.totalTasks = visibleTasks.length
-        this.hasMore = visibleTasks.length > this.currentPage * this.pageSize
+        const res = await api.get(`/task?${params.toString()}`)
+        const data = res.data.data || []
+        this.tasks = data
+        this.totalTasks = res.data.total ?? 0
+        this.currentPage = res.data.current_page ?? page
+        this.lastPage = res.data.last_page ?? 1
+        this.paginationLinks = res.data.links || []
+        this.from = res.data.from ?? null
+        this.to = res.data.to ?? null
         this.lastFetch = Date.now()
-        
         return { success: true, data: this.paginatedTasks }
       } catch (error) {
         this.error = error.response?.data?.error || error.message || 'Failed to fetch tasks'
@@ -178,24 +167,20 @@ export const useTaskStore = defineStore('task', {
     /**
      * Fast create task (only projectId and title)
      */
-    async fastCreateTask(projectId, title) {
+    async fastCreateTask(projectId, title, projectMeetingId = null) {
+      // console.log(arguments);
+      
       this.loading = true
       this.error = null
 
       try {
         const response = await api.post('/task/fast-create', {
           projectId: parseInt(projectId),
+          projectMeetingId: projectMeetingId ? parseInt(projectMeetingId) : null,
           title: title.trim(),
         })
         const task = response.data.task
-        
-        // Add to cache (prepend to show latest first)
-        this.tasks.unshift(task)
-        this.totalTasks++
-        
-        // Update cache timestamp
         this.lastFetch = Date.now()
-        
         return { success: true, data: task }
       } catch (error) {
         this.error = error.response?.data?.error || error.message || 'Failed to create task'
@@ -216,15 +201,8 @@ export const useTaskStore = defineStore('task', {
       try {
         const response = await api.post('/task/create', taskData)
         const task = response.data.task
-        
-        // Add to cache
-        this.tasks.unshift(task)
-        this.totalTasks++
         this.currentTask = task
-        
-        // Update cache timestamp
         this.lastFetch = Date.now()
-        
         return { success: true, data: task }
       } catch (error) {
         this.error = error.response?.data?.error || error.message || 'Failed to create task'
@@ -316,27 +294,19 @@ export const useTaskStore = defineStore('task', {
      * Go to next page
      */
     async nextPage() {
-      const nextPage = this.currentPage + 1
-      if (nextPage <= Math.ceil(this.totalTasks / this.pageSize)) {
-        await this.fetchTasks(false, nextPage)
+      if (this.currentPage < this.lastPage) {
+        await this.fetchTasks(false, this.currentPage + 1)
       }
     },
 
-    /**
-     * Go to previous page
-     */
     async previousPage() {
       if (this.currentPage > 1) {
         await this.fetchTasks(false, this.currentPage - 1)
       }
     },
 
-    /**
-     * Go to specific page
-     */
     async goToPage(page) {
-      const maxPages = Math.ceil(this.totalTasks / this.pageSize)
-      if (page >= 1 && page <= maxPages) {
+      if (page >= 1 && page <= this.lastPage) {
         await this.fetchTasks(false, page)
       }
     },
