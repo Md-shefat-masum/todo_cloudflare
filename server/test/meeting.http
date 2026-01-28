@@ -1,7 +1,7 @@
 ### Meeting Management API Tests
 ### Base URL - Update this to match your server URL
 @baseUrl = http://localhost:5173
-@token = eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOjEsImVtYWlsIjoibXlwaG90bzI4OEBnbWFpbC5jb20iLCJuYW1lIjoic2hlZmF0IiwiaWF0IjoxNzY5MDEyODcyLCJleHAiOjE3NjkwOTkyNzJ9.tbU3AhQAlFvaQ_ecmYQYxSXdyImeZLoFPDL2WWSYQiM
+@token = 
 
 @meetingId = 
 @projectId = 1

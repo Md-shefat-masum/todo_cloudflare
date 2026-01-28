@@ -1,7 +1,7 @@
 ### Authentication API Tests
 ### Base URL - Update this to match your server URL
 @baseUrl = http://localhost:5173
-@token = eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOjEsImVtYWlsIjoibXlwaG90bzI4OEBnbWFpbC5jb20iLCJuYW1lIjoic2hlZmF0IiwiaWF0IjoxNzY4OTIxNzI3LCJleHAiOjE3NjkwMDgxMjd9.fKauZgtT2ny20x1_GZuwrS7Dv5pPRHKLZVczGb7tmXU
+@token = 
 
 ### Variables
 @email = myphoto288@gmail.com
@@ -79,7 +79,7 @@ Authorization: Bearer invalid.token.here
 
 ### 10. Get profile with expired token (if you have one)
 GET {{baseUrl}}/auth/profile
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsImVtYWlsIjoibXlwaG90bzI4OEBnbWFpbC5jb20iLCJuYW1lIjoic2hlZmF0IiwiaWF0IjoxNzM3MzYwMDAwLCJleHAiOjE3MzczNjAwMDB9.invalid
+Authorization: Bearer 
 
 ### 11. Get profile with malformed Authorization header
 GET {{baseUrl}}/auth/profile
