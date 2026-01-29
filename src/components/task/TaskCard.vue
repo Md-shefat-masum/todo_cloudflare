@@ -99,6 +99,7 @@
 </template>
 
 <script>
+import Swal from 'sweetalert2'
 import { useProjectStore } from '@stores/project'
 import { useMeetingStore } from '@stores/meeting'
 
@@ -169,8 +170,17 @@ export default {
     completeTask() {
       this.$emit('complete', this.task.id)
     },
-    softDeleteTask() {
-      if (confirm(`Are you sure you want to remove "${this.task.title}"?`)) {
+    async softDeleteTask() {
+      const { isConfirmed } = await Swal.fire({
+        title: 'Delete task?',
+        text: `Are you sure you want to remove "${this.task.title}"?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: 'Yes, delete',
+      })
+      if (isConfirmed) {
         this.$emit('delete', this.task.id)
       }
     },
