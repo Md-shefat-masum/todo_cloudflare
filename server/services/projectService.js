@@ -177,6 +177,64 @@ export async function updateProject(prisma, id, projectData) {
 }
 
 /**
+ * Get project analytics: projects with task counts (completed / total) for active tasks (status=1).
+ * Only returns projects that have at least one incomplete task (task_status != 'completed').
+ * @param {PrismaClient} prisma - Prisma client instance
+ * @param {number} userId - Filter by project creator
+ * @returns {Promise<Object>} { success, data: [{ id, title, completedCount, totalCount }] }
+ */
+export async function getProjectAnalytics(prisma, userId = null) {
+	try {
+		const projectWhere = userId ? { creator: userId } : {};
+		const projects = await prisma.project.findMany({
+			where: projectWhere,
+			orderBy: { createdAt: 'desc' },
+			select: { id: true, title: true },
+		});
+
+		if (projects.length === 0) {
+			return { success: true, data: [] };
+		}
+
+		const projectIds = projects.map((p) => p.id);
+		const tasks = await prisma.task.findMany({
+			where: {
+				projectId: { in: projectIds },
+				status: 1,
+			},
+			select: { projectId: true, taskStatus: true },
+		});
+
+		const totalByProject = new Map();
+		const completedByProject = new Map();
+		const incompleteByProject = new Map();
+		for (const t of tasks) {
+			if (t.projectId == null) continue;
+			totalByProject.set(t.projectId, (totalByProject.get(t.projectId) || 0) + 1);
+			if (t.taskStatus === 'completed') {
+				completedByProject.set(t.projectId, (completedByProject.get(t.projectId) || 0) + 1);
+			} else {
+				incompleteByProject.set(t.projectId, (incompleteByProject.get(t.projectId) || 0) + 1);
+			}
+		}
+
+		const data = projects
+			.filter((p) => totalByProject.has(p.id) && (incompleteByProject.get(p.id) || 0) > 0)
+			.map((p) => ({
+				id: p.id,
+				title: p.title,
+				completedCount: completedByProject.get(p.id) || 0,
+				totalCount: totalByProject.get(p.id) || 0,
+			}));
+
+		return { success: true, data };
+	} catch (error) {
+		console.error('Error getting project analytics:', error);
+		return { success: false, error: error.message };
+	}
+}
+
+/**
  * Delete a project
  * @param {PrismaClient} prisma - Prisma client instance
  * @param {number} id - Project ID

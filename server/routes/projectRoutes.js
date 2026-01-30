@@ -19,6 +19,29 @@ export async function handleProjectRoutes(request, prisma, corsHeaders, env = {}
 		return payload?.userId || null;
 	}
 
+	// GET /project/analytics - Project task counts (incomplete/total) for active tasks
+	if (pathname === "/project/analytics" && method === 'GET') {
+		try {
+			const userId = await getUserId();
+			const result = await projectService.getProjectAnalytics(prisma, userId);
+
+			if (result.success) {
+				return Response.json({ projects: result.data }, { headers: corsHeaders });
+			}
+
+			return Response.json(
+				{ error: result.error },
+				{ status: result.statusCode || 500, headers: corsHeaders }
+			);
+		} catch (error) {
+			console.error('Project analytics error:', error);
+			return Response.json(
+				{ error: 'Failed to fetch project analytics' },
+				{ status: 500, headers: corsHeaders }
+			);
+		}
+	}
+
 	// GET /project - List all projects (optional: filter by creator)
 	if (pathname === "/project" && method === 'GET') {
 		try {
