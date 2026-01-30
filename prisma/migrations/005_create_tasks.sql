@@ -1,6 +1,7 @@
 -- CreateTable
 CREATE TABLE IF NOT EXISTS "tasks" (
     "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "serial" INTEGER DEFAULT 1,
     "project_id" INTEGER,
     "project_meeting_id" INTEGER,
     "parent_task_id" INTEGER,
@@ -29,3 +30,4 @@ CREATE INDEX IF NOT EXISTS "idx_tasks_submission_date" ON "tasks"("submission_da
 CREATE INDEX IF NOT EXISTS "idx_tasks_assigned_status" ON "tasks"("assigned_to", "task_status");
 CREATE INDEX IF NOT EXISTS "idx_tasks_status_submission_date" ON "tasks"("task_status", "submission_date");
 CREATE INDEX IF NOT EXISTS "idx_tasks_project_status_date" ON "tasks"("project_id", "task_status", "submission_date");
+CREATE INDEX IF NOT EXISTS "idx_tasks_task_status_serial" ON "tasks"("task_status", "serial");

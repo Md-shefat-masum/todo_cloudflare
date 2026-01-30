@@ -34,6 +34,7 @@ model Project {
 
 model Task {
   id             Int       @id @default(autoincrement())
+  serial         Int?       @default(1) @map("serial")
   projectId      Int?      @map("project_id")
   projectMeetingId Int?    @map("project_meeting_id")
   parentTaskId   Int?      @map("parent_task_id")
