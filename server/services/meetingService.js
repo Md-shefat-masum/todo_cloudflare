@@ -79,6 +79,65 @@ export async function getMeetingById(prisma, id) {
 }
 
 /**
+ * Get meeting analytics: meetings with task counts (completed / total) for active tasks (status=1).
+ * Only returns meetings that have at least one incomplete task (task_status != 'completed').
+ * @param {PrismaClient} prisma - Prisma client instance
+ * @param {number} userId - Filter by meeting creator
+ * @returns {Promise<Object>} { success, data: [{ id, title, projectId, completedCount, totalCount }] }
+ */
+export async function getMeetingAnalytics(prisma, userId = null) {
+	try {
+		const meetingWhere = userId ? { creator: userId } : {};
+		const meetings = await prisma.meeting.findMany({
+			where: meetingWhere,
+			orderBy: { date: 'desc' },
+			select: { id: true, title: true, projectId: true },
+		});
+
+		if (meetings.length === 0) {
+			return { success: true, data: [] };
+		}
+
+		const meetingIds = meetings.map((m) => m.id);
+		const tasks = await prisma.task.findMany({
+			where: {
+				projectMeetingId: { in: meetingIds },
+				status: 1,
+			},
+			select: { projectMeetingId: true, taskStatus: true },
+		});
+
+		const totalByMeeting = new Map();
+		const completedByMeeting = new Map();
+		const incompleteByMeeting = new Map();
+		for (const t of tasks) {
+			if (t.projectMeetingId == null) continue;
+			totalByMeeting.set(t.projectMeetingId, (totalByMeeting.get(t.projectMeetingId) || 0) + 1);
+			if (t.taskStatus === 'completed') {
+				completedByMeeting.set(t.projectMeetingId, (completedByMeeting.get(t.projectMeetingId) || 0) + 1);
+			} else {
+				incompleteByMeeting.set(t.projectMeetingId, (incompleteByMeeting.get(t.projectMeetingId) || 0) + 1);
+			}
+		}
+
+		const data = meetings
+			.filter((m) => totalByMeeting.has(m.id) && (incompleteByMeeting.get(m.id) || 0) > 0)
+			.map((m) => ({
+				id: m.id,
+				title: m.title,
+				projectId: m.projectId,
+				completedCount: completedByMeeting.get(m.id) || 0,
+				totalCount: totalByMeeting.get(m.id) || 0,
+			}));
+
+		return { success: true, data };
+	} catch (error) {
+		console.error('Error getting meeting analytics:', error);
+		return { success: false, error: error.message };
+	}
+}
+
+/**
  * Get a single meeting by slug
  * @param {PrismaClient} prisma - Prisma client instance
  * @param {string} slug - Meeting slug

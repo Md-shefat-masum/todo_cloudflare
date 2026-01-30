@@ -19,6 +19,29 @@ export async function handleMeetingRoutes(request, prisma, corsHeaders, env = {}
 		return payload?.userId || null;
 	}
 
+	// GET /meeting/analytics - Meeting task counts (completed/total) for active tasks
+	if (pathname === "/meeting/analytics" && method === 'GET') {
+		try {
+			const userId = await getUserId();
+			const result = await meetingService.getMeetingAnalytics(prisma, userId);
+
+			if (result.success) {
+				return Response.json({ meetings: result.data }, { headers: corsHeaders });
+			}
+
+			return Response.json(
+				{ error: result.error },
+				{ status: result.statusCode || 500, headers: corsHeaders }
+			);
+		} catch (error) {
+			console.error('Meeting analytics error:', error);
+			return Response.json(
+				{ error: 'Failed to fetch meeting analytics' },
+				{ status: 500, headers: corsHeaders }
+			);
+		}
+	}
+
 	// GET /meeting - List all meetings (with optional filters)
 	if (pathname === "/meeting" && method === 'GET') {
 		try {
