@@ -1,5 +1,5 @@
 <template>
-  <div class="project-details-page h-full overflow-y-auto">
+  <div class="project-details-page h-full overflow-y-auto print:overflow-y-visible print:h-auto">
     <div class="no-print header-section mb-6">
       <router-link
         to="/projects"

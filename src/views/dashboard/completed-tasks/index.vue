@@ -1,5 +1,5 @@
 <template>
-  <div class="completed-tasks-page">
+  <div class="completed-tasks-page h-full overflow-y-auto print:overflow-y-visible print:h-auto">
     <div class="no-print controls">
       <h1 class="page-title">Completed Tasks</h1>
       <div class="date-filter">
