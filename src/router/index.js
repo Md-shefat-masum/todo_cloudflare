@@ -101,6 +101,12 @@ const router = createRouter({
       meta: { middleware: 'private', layout: 'private' },
     },
     {
+      path: '/kanban-board',
+      name: 'kanban-board',
+      component: () => import('@views/dashboard/kanban/index.vue'),
+      meta: { middleware: 'private', layout: 'private' },
+    },
+    {
       path: '/meetings',
       name: 'meetings-list',
       component: () => import('@views/dashboard/meetings/list.vue'),

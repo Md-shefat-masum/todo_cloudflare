@@ -64,6 +64,7 @@ export default {
         { name: 'meetings', label: 'Meetings', to: '/meetings', icon: 'fa-calendar-alt', disabled: false },
         { name: 'tasks', label: 'Tasks', to: '/tasks', icon: 'fa-tasks', disabled: false },
         { name: 'completed-tasks', label: 'Completed Tasks', to: '/completed-tasks', icon: 'fa-check-square', disabled: false },
+        { name: 'kanban', label: 'Kanban Board', to: '/kanban-board', icon: 'fa-columns', disabled: false },
       ],
     }
   },
@@ -119,7 +120,10 @@ export default {
       if (route === '/completed-tasks' && this.$route.path.startsWith('/completed-tasks')) {
         return true
       }
-      
+      if (route === '/kanban-board' && this.$route.path.startsWith('/kanban-board')) {
+        return true
+      }
+
       return false
     },
   },
