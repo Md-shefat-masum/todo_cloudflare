@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gray-50">
+  <div class="min-h-screen bg-gray-50 app_container">
     <!-- Header -->
     <HeaderComponent />
     
@@ -28,3 +28,11 @@ export default {
   },
 }
 </script>
+
+<style scoped>
+@media print {
+  .app_container {
+    background-color: #fff !important;
+  }
+}
+</style>

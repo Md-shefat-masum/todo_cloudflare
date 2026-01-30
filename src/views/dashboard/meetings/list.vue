@@ -57,7 +57,7 @@
     <!-- Meeting Form Modal -->
     <div
       v-if="showMeetingFormModal"
-      class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+      class="fixed inset-0 bg-[rgba(0,0,0,0.5)] z-50 flex items-center justify-center p-4"
       @click.self="showMeetingFormModal = false"
     >
       <div class="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
