@@ -16,6 +16,15 @@
         <ProjectAnalytics />
         <MeetingAnalytics />
       </div>
+
+      <div class="mt-6">
+        <CalendarAnalytics />
+      </div>
+
+      <div class="mt-6">
+        <TaskCompletionChart />
+      </div>
+
     </div>
   </div>
 </template>
@@ -26,10 +35,12 @@ import TaskProgress from '@components/task/TaskProgress.vue'
 import TaskStatusAnalytics from '@components/task/TaskStatusAnalytics.vue'
 import ProjectAnalytics from '@components/project/ProjectAnalytics.vue'
 import MeetingAnalytics from '@components/meeting/MeetingAnalytics.vue'
+import CalendarAnalytics from '@components/task/CalendarAnalytics.vue'
+import TaskCompletionChart from '@components/task/TaskCompletionChart.vue'
 
 export default {
   name: 'DashboardView',
-  components: { TaskProgress, TaskStatusAnalytics, ProjectAnalytics, MeetingAnalytics },
+  components: { TaskProgress, TaskStatusAnalytics, ProjectAnalytics, MeetingAnalytics, CalendarAnalytics, TaskCompletionChart },
   computed: {
     userName() {
       return useAuthStore().userName

@@ -65,6 +65,51 @@ export async function handleTaskRoutes(request, prisma, corsHeaders, env = {}) {
 		}
 	}
 
+	// GET /task/calendar-years - Unique years for calendar filter
+	if (pathname === "/task/calendar-years" && method === 'GET') {
+		try {
+			const userId = await getUserId();
+			const result = await taskService.getCalendarYears(prisma, userId);
+			if (result.success) {
+				return Response.json({ years: result.data }, { headers: corsHeaders });
+			}
+			return Response.json(
+				{ error: result.error },
+				{ status: result.statusCode || 500, headers: corsHeaders }
+			);
+		} catch (error) {
+			console.error('Calendar years error:', error);
+			return Response.json(
+				{ error: 'Failed to fetch calendar years' },
+				{ status: 500, headers: corsHeaders }
+			);
+		}
+	}
+
+	// GET /task/calendar?year=&month= - Completed task count per day
+	if (pathname === "/task/calendar" && method === 'GET') {
+		try {
+			const userId = await getUserId();
+			const searchParams = url.searchParams;
+			const year = parseInt(searchParams.get('year'), 10) || new Date().getFullYear();
+			const month = parseInt(searchParams.get('month'), 10) || new Date().getMonth() + 1;
+			const result = await taskService.getCalendarMonthData(prisma, year, month, userId);
+			if (result.success) {
+				return Response.json(result.data, { headers: corsHeaders });
+			}
+			return Response.json(
+				{ error: result.error },
+				{ status: result.statusCode || 500, headers: corsHeaders }
+			);
+		} catch (error) {
+			console.error('Calendar month error:', error);
+			return Response.json(
+				{ error: 'Failed to fetch calendar data' },
+				{ status: 500, headers: corsHeaders }
+			);
+		}
+	}
+
 	// GET /task - List all tasks (with optional filters)
 	if (pathname === "/task" && method === 'GET') {
 		try {

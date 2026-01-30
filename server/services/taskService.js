@@ -15,6 +15,81 @@ function calculateDuration(startDate, endDate) {
 }
 
 /**
+ * Get unique years from tasks (completion_date, submission_date) for calendar filter.
+ * @param {PrismaClient} prisma - Prisma client instance
+ * @param {number} userId - Filter by assigned user
+ * @returns {Promise<Object>} { success, data: number[] }
+ */
+export async function getCalendarYears(prisma, userId = null) {
+	try {
+		const where = { status: 1, parentTaskId: null };
+		if (userId) where.assignedTo = userId;
+
+		const tasks = await prisma.task.findMany({
+			where,
+			select: { completionDate: true, submissionDate: true },
+		});
+
+		const years = new Set();
+		const now = new Date();
+		years.add(now.getFullYear());
+		for (const t of tasks) {
+			if (t.completionDate) years.add(new Date(t.completionDate).getFullYear());
+			if (t.submissionDate) years.add(new Date(t.submissionDate).getFullYear());
+		}
+
+		const data = [...years].sort((a, b) => a - b);
+		return { success: true, data };
+	} catch (error) {
+		console.error('Error getting calendar years:', error);
+		return { success: false, error: error.message };
+	}
+}
+
+/**
+ * Get completed task count per day for a given month/year.
+ * @param {PrismaClient} prisma - Prisma client instance
+ * @param {number} year - Year
+ * @param {number} month - Month (1-12)
+ * @param {number} userId - Filter by assigned user
+ * @returns {Promise<Object>} { success, data: { [day]: count } }
+ */
+export async function getCalendarMonthData(prisma, year, month, userId = null) {
+	try {
+		const start = new Date(year, month - 1, 1);
+		const end = new Date(year, month, 0, 23, 59, 59, 999);
+
+		const where = {
+			status: 1,
+			taskStatus: 'completed',
+			completionDate: { gte: start, lte: end },
+		};
+		if (userId) where.assignedTo = userId;
+
+		const tasks = await prisma.task.findMany({
+			where,
+			select: { completionDate: true },
+		});
+
+		const countByDay = new Map();
+		for (const t of tasks) {
+			if (t.completionDate) {
+				const d = new Date(t.completionDate);
+				const day = d.getDate();
+				countByDay.set(day, (countByDay.get(day) || 0) + 1);
+			}
+		}
+
+		const data = {};
+		for (const [day, count] of countByDay) data[day] = count;
+		return { success: true, data };
+	} catch (error) {
+		console.error('Error getting calendar month data:', error);
+		return { success: false, error: error.message };
+	}
+}
+
+/**
  * Get task progress stats: total and incomplete counts for active tasks.
  * @param {PrismaClient} prisma - Prisma client instance
  * @param {number} userId - Filter by assigned user

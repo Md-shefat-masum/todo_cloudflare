@@ -85,10 +85,31 @@ export default {
       return `${from} – ${to}`
     },
   },
+  watch: {
+    '$route.query': {
+      handler(query) {
+        if (this.applyQueryDates(query)) {
+          this.store.fetchCompletedTasks()
+        }
+      },
+      immediate: true,
+    },
+  },
   async mounted() {
-    await this.store.fetchCompletedTasks()
+    if (!this.applyQueryDates(this.$route.query)) {
+      await this.store.fetchCompletedTasks()
+    }
   },
   methods: {
+    applyQueryDates(query) {
+      const from = query?.from
+      const to = query?.to
+      if (from && to) {
+        this.store.setDates(from, to)
+        return true
+      }
+      return false
+    },
     formatDateReadable(dateStr) {
       if (!dateStr) return ''
       const d = new Date(dateStr)
