@@ -29,21 +29,49 @@ function generateSlug(text, projectId) {
 export async function listMeetings(prisma, filters = {}) {
 	try {
 		const where = {};
-		
+
 		if (filters.projectId !== undefined) {
 			where.projectId = parseInt(filters.projectId);
 		}
-		
+
 		if (filters.creator !== undefined) {
 			where.creator = parseInt(filters.creator);
 		}
-		
+
 		const meetings = await prisma.meeting.findMany({
 			where,
-			orderBy: { date: 'desc' },
+			orderBy: { id: 'desc' },
 		});
-		
-		return { success: true, data: meetings };
+
+		if (meetings.length === 0) {
+			return { success: true, data: [] };
+		}
+
+		const meetingIds = meetings.map((m) => m.id);
+		const [totalByMeeting, completedByMeeting] = await Promise.all([
+			prisma.task.groupBy({
+				by: ['projectMeetingId'],
+				where: { projectMeetingId: { in: meetingIds }, status: 1 },
+				_count: { id: true },
+			}),
+			prisma.task.groupBy({
+				by: ['projectMeetingId'],
+				where: { projectMeetingId: { in: meetingIds }, status: 1, taskStatus: 'completed' },
+				_count: { id: true },
+			}),
+		]);
+
+		const totalMap = new Map(totalByMeeting.map((t) => [t.projectMeetingId, t._count.id]));
+		const completedMap = new Map(completedByMeeting.map((t) => [t.projectMeetingId, t._count.id]));
+
+		const data = meetings.map((m) => {
+			const total_tasks = totalMap.get(m.id) ?? 0;
+			const total_completed = completedMap.get(m.id) ?? 0;
+			const total_incompleted = total_tasks - total_completed;
+			return { ...m, total_tasks, total_completed, total_incompleted };
+		});
+
+		return { success: true, data };
 	} catch (error) {
 		console.error('Error listing meetings:', error);
 		return { success: false, error: error.message };
