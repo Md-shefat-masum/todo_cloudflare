@@ -152,12 +152,14 @@ export async function getTaskProgressStats(prisma, userId = null) {
 
 		const total = tasks.length;
 		const incomplete = tasks.filter((t) => t.taskStatus !== 'completed').length;
+		const completed = tasks.filter((t) => t.taskStatus === 'completed').length;
 
 		return {
 			success: true,
 			data: {
 				total,
 				incomplete,
+				completed,
 				todayCompleted,
 				thisWeekCompleted,
 				thisMonthCompleted,
@@ -277,7 +279,7 @@ export async function listTasks(prisma, filters = {}) {
 				orderBy,
 				include: {
 					subtasks: {
-						select: { id: true, taskStatus: true },
+						select: { id: true, title: true, taskStatus: true, submissionDate: true },
 					},
 				},
 			});
@@ -292,7 +294,7 @@ export async function listTasks(prisma, filters = {}) {
 				take: perPage,
 				include: {
 					subtasks: {
-						select: { id: true, taskStatus: true },
+						select: { id: true, title: true, taskStatus: true, submissionDate: true },
 					},
 				},
 			});
@@ -312,19 +314,28 @@ export async function listTasks(prisma, filters = {}) {
 		const meetingById = new Map(meetings.map(m => [m.id, m.title]));
 
 		const tasksWithCounts = tasks.map(task => {
-			const subtasks = task.subtasks || [];
-			const completedSubtasks = subtasks.filter(st => st.taskStatus === 'completed').length;
-			const incompletedSubtasks = subtasks.length - completedSubtasks;
-			const completionPercent = subtasks.length > 0
-				? Math.round((completedSubtasks / subtasks.length) * 100)
+			const rawSubtasks = task.subtasks || [];
+			const completedSubtasks = rawSubtasks.filter(st => st.taskStatus === 'completed').length;
+			const incompletedSubtasks = rawSubtasks.length - completedSubtasks;
+			const completionPercent = rawSubtasks.length > 0
+				? Math.round((completedSubtasks / rawSubtasks.length) * 100)
 				: 0;
+			const projectName = task.projectId ? (projectById.get(task.projectId) ?? null) : null;
+			const subtasks = rawSubtasks.map(st => ({
+				id: st.id,
+				title: st.title ?? '',
+				taskStatus: st.taskStatus,
+				submissionDate: st.submissionDate ?? null,
+				projectName,
+			}));
 			return {
 				...task,
+				subtasks,
 				totalSubTasks: subtasks.length,
 				completedSubTasks: completedSubtasks,
 				incompletedSubTasks: incompletedSubtasks,
 				completionPercent,
-				projectName: task.projectId ? (projectById.get(task.projectId) ?? null) : null,
+				projectName,
 				meetingName: task.projectMeetingId ? (meetingById.get(task.projectMeetingId) ?? null) : null,
 			};
 		});
