@@ -377,10 +377,6 @@ export async function getProjectTasks(prisma, projectId, filters = {}) {
 
 		const where = { status: 1, projectId: pid, parentTaskId: null };
 
-		if (filters.task_status && Array.isArray(filters.task_status) && filters.task_status.length > 0) {
-			where.taskStatus = { in: filters.task_status };
-		}
-
 		if (filters.project_meeting_id != null && filters.project_meeting_id !== '') {
 			const mid = parseInt(filters.project_meeting_id, 10);
 			if (!isNaN(mid)) where.projectMeetingId = mid;
@@ -395,14 +391,53 @@ export async function getProjectTasks(prisma, projectId, filters = {}) {
 			String(filters.from_date).trim() !== '' &&
 			String(filters.to_date).trim() !== '';
 
+		const statusIn =
+			filters.task_status && Array.isArray(filters.task_status) && filters.task_status.length > 0
+				? { in: filters.task_status }
+				: null;
+
+		// Status: include parent if parent matches OR has subtask matching
+		if (statusIn) {
+			where.OR = [
+				{ taskStatus: statusIn },
+				{ subtasks: { some: { taskStatus: statusIn } } },
+			];
+		}
+
+		// Date: when status filter exists, allow parent OR subtask to have date in range (parent may have null date)
 		if (hasDateRange) {
 			const fromStart = new Date(filters.from_date);
 			fromStart.setHours(0, 0, 0, 0);
 			const toEnd = new Date(filters.to_date);
 			toEnd.setHours(23, 59, 59, 999);
-			where[dateField] = { gte: fromStart, lte: toEnd };
+			const dateRange = { gte: fromStart, lte: toEnd };
+			if (statusIn) {
+				where.AND = [
+					...(where.AND || []),
+					{
+						OR: [
+							{ [dateField]: dateRange },
+							{ subtasks: { some: { [dateField]: dateRange } } },
+						],
+					},
+				];
+			} else {
+				where[dateField] = dateRange;
+			}
 		} else {
-			where[dateField] = { not: null };
+			if (statusIn) {
+				where.AND = [
+					...(where.AND || []),
+					{
+						OR: [
+							{ [dateField]: { not: null } },
+							{ subtasks: { some: { [dateField]: { not: null } } } },
+						],
+					},
+				];
+			} else {
+				where[dateField] = { not: null };
+			}
 		}
 
 		const sortBy = filters.sort_by === 'id' ? 'id' : dateField;
@@ -413,6 +448,9 @@ export async function getProjectTasks(prisma, projectId, filters = {}) {
 			orderBy: { [sortBy]: sortOrder },
 			include: {
 				subtasks: {
+					...(filters.task_status?.length && {
+						where: { taskStatus: { in: filters.task_status } },
+					}),
 					orderBy: { id: 'asc' },
 					select: {
 						id: true,
