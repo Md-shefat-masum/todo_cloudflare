@@ -57,7 +57,11 @@
     <!-- Edit mode: single task (title + description) -->
     <div v-else class="task_list_wrapper">
       <div class="task_list_item">
-        <div>
+        <div v-if="task?.parent_task_info?.title">
+          <b>Parent Task:</b> {{ task?.parent_task_info?.title }}
+
+        </div>
+        <div class="my-3">
           <label for="title" class="block text-sm font-medium text-gray-700 mb-1">
             Title <span class="text-red-500">*</span>
           </label>
@@ -126,7 +130,7 @@
       </div>
     </div>
 
-    <div class="grid grid-cols-2 gap-4">
+    <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
       <div>
         <label for="priority" class="block text-sm font-medium text-gray-700 mb-1">
           Priority
@@ -149,6 +153,7 @@
         <select
           id="taskStatus"
           v-model="formData.taskStatus"
+          @change="onTaskStatusChange"
           class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
         >
           <option value="pending">Pending</option>
@@ -157,6 +162,20 @@
           <option value="failed">Failed</option>
           <option value="hold">Hold</option>
         </select>
+      </div>
+      <div v-if="formData.taskStatus === 'in_progress'">
+        <label for="progressPercent" class="block text-sm font-medium text-gray-700 mb-1">
+          Progress %
+        </label>
+        <input
+          id="progressPercent"
+          v-model.number="formData.progressPercent"
+          type="number"
+          min="0"
+          max="100"
+          class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+          placeholder="0–100"
+        />
       </div>
     </div>
 
@@ -294,8 +313,10 @@ export default {
         description: '',
         projectId: null,
         projectMeetingId: null,
+        parentTaskId: null,
         priority: 'mid',
         taskStatus: 'pending',
+        progressPercent: 0,
         submissionDate: '',
         executionDate: '',
         completionDate: '',
@@ -358,8 +379,10 @@ export default {
             description: newTask.description || '',
             projectId: newTask.projectId || null,
             projectMeetingId: newTask.projectMeetingId || null,
+            parentTaskId: newTask.parentTaskId ?? null,
             priority: newTask.priority || 'mid',
             taskStatus: newTask.taskStatus || 'pending',
+            progressPercent: newTask.taskStatus === 'completed' ? 100 : (newTask.progressPercent ?? 0),
             submissionDate: this.formatDateTimeLocal(newTask.submissionDate),
             executionDate: this.formatDateTimeLocal(newTask.executionDate),
             completionDate: this.formatDateTimeLocal(newTask.completionDate),
@@ -379,8 +402,10 @@ export default {
             description: '',
             projectId: inheritedProjectId,
             projectMeetingId: null,
+            parentTaskId: this.parentTaskId ?? null,
             priority: 'mid',
             taskStatus: 'pending',
+            progressPercent: 0,
             submissionDate: '',
             executionDate: '',
             completionDate: '',
@@ -461,6 +486,11 @@ export default {
       this.formData.projectMeetingId = null
       this.fetchMeetingsByProject()
     },
+    onTaskStatusChange() {
+      if (this.formData.taskStatus === 'completed') {
+        this.formData.progressPercent = 100
+      }
+    },
     formatDateTimeLocal(dateString) {
       if (!dateString) return ''
       const date = new Date(dateString)
@@ -522,9 +552,10 @@ export default {
       const shared = {
         projectId,
         projectMeetingId: this.formData.projectMeetingId || null,
-        parentTaskId: this.parentTaskId || null,
+        parentTaskId: this.formData.parentTaskId ?? this.parentTaskId ?? null,
         priority: this.formData.priority,
         taskStatus: this.formData.taskStatus,
+        progressPercent: this.formData.progressPercent ?? 0,
         submissionDate: this.formData.submissionDate || null,
         executionDate: this.formData.executionDate || null,
         completionDate: this.formData.completionDate || null,
