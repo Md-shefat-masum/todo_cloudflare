@@ -9,7 +9,7 @@
       <SidebarComponent />
       
       <!-- Main Content -->
-      <main class="flex-1 p-2 lg:p-6">
+      <main class="flex-1 p-2 lg:p-6 w-full md:w-[calc(100%-256px)]">
         <router-view />
       </main>
     </div>
