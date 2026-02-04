@@ -11,7 +11,7 @@
     @dragend="onDragEnd"
   >
     <div class="text-sm font-medium text-gray-800 line-clamp-2">
-      {{ task.title }} - {{ task.id }}
+      {{ task.title }}
     </div>
     <div v-if="task.priority" class="mt-1">
       <span
@@ -19,6 +19,15 @@
         :class="priorityClass"
       >
         {{ task.priority }}
+      </span>
+      <span class="inline-block px-1.5 ml-1 py-0.5 text-xs rounded" v-if="task.taskStatus == 'completed'" :class="statusClass">
+        {{ new Date(task.completionDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, ' ').toLowerCase() }}
+      </span>
+      <span class="inline-block px-1.5 ml-1 py-0.5 text-xs rounded" v-if="task.taskStatus == 'in_progress'" :class="statusClass">
+        {{ new Date(task.executionDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, ' ').toLowerCase() }}
+      </span>
+      <span class="inline-block px-1.5 ml-1 py-0.5 text-xs rounded" v-if="task.taskStatus == 'pending'" :class="statusClass">
+        {{ new Date(task.submissionDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, ' ').toLowerCase() }}
       </span>
     </div>
   </div>
@@ -36,6 +45,10 @@ export default {
     priorityClass() {
       const m = { high: 'bg-red-100 text-red-700', urgent: 'bg-orange-100 text-orange-700', mid: 'bg-blue-100 text-blue-700', low: 'bg-gray-100 text-gray-600' }
       return m[this.task.priority] || 'bg-gray-100 text-gray-600'
+    },
+    statusClass() {
+      const m = { completed: 'bg-green-100 text-green-700', pending: 'bg-yellow-100 text-yellow-700', in_progress: 'bg-blue-100 text-blue-700', partially_completed: 'bg-purple-100 text-purple-700' }
+      return m[this.task.taskStatus] || 'bg-gray-100 text-gray-600'
     },
   },
   methods: {

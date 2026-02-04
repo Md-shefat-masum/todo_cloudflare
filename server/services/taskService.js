@@ -266,26 +266,26 @@ export async function listTasks(prisma, filters = {}) {
 
 			// PARTIALLY COMPLETED (subtasks-driven, parent ignored)
 			else if (filters.taskStatus === 'partially_completed') {
-				where.AND = [
-					// Must have subtasks
-					{
-						subtasks: {
-							some: {}, // at least one subtask exists
-						},
-					},
-
-					// At least one subtask completed
+				where.OR = [
+					// 🔹 Case 1: Has subtasks and at least one is completed
 					{
 						subtasks: {
 							some: { taskStatus: 'completed' },
 						},
 					},
 
-					// At least one subtask NOT completed
+					// 🔹 Case 2: No subtasks but parent task is completed
 					{
-						subtasks: {
-							some: { taskStatus: { not: 'completed' } },
-						},
+						AND: [
+							{
+								subtasks: {
+									none: {},
+								},
+							},
+							{
+								taskStatus: 'completed',
+							},
+						],
 					},
 				];
 			}
@@ -359,24 +359,53 @@ export async function listTasks(prisma, filters = {}) {
 		}
 
 		// Date filter for PARTIALLY COMPLETED tasks (subtask-based)
-		if (
-			hasDateRange &&
-			filters.taskStatus === 'partially_completed'
-		) {
+		if (hasDateRange && filters.taskStatus === 'partially_completed') {
 			const fromStart = new Date(filters.from_date);
 			fromStart.setHours(0, 0, 0, 0);
 
 			const toEnd = new Date(filters.to_date);
 			toEnd.setHours(23, 59, 59, 999);
 
-			where.subtasks = {
-				some: {
-					completionDate: {
-						gte: fromStart,
-						lte: toEnd,
-					},
+			where.AND = [
+				...(where.AND || []),
+
+				{
+					OR: [
+						// 🔹 Case 1: No subtasks → parent completed in range
+						{
+							AND: [
+								{
+									subtasks: {
+										none: {},
+									},
+								},
+								{
+									taskStatus: 'completed',
+								},
+								{
+									completionDate: {
+										gte: fromStart,
+										lte: toEnd,
+									},
+								},
+							],
+						},
+
+						// 🔹 Case 2: Has subtasks → completed subtask in range
+						{
+							subtasks: {
+								some: {
+									taskStatus: 'completed',
+									completionDate: {
+										gte: fromStart,
+										lte: toEnd,
+									},
+								},
+							},
+						},
+					],
 				},
-			};
+			];
 		}
 
 		const hasSubmissionDateRange = filters.submission_date_from != null && filters.submission_date_to != null &&
@@ -1294,7 +1323,7 @@ export async function getKanbanTasks(prisma, filters = {}) {
 
 		const tasks = await prisma.task.findMany({
 			where,
-			orderBy: [{ taskStatus: 'asc' }, { serial: 'asc' }, {updatedAt: 'desc'}],
+			orderBy: [{ taskStatus: 'asc' }, { serial: 'asc' }, { updatedAt: 'desc' }],
 			select: {
 				id: true,
 				title: true,
@@ -1303,6 +1332,9 @@ export async function getKanbanTasks(prisma, filters = {}) {
 				priority: true,
 				projectId: true,
 				projectMeetingId: true,
+				completionDate: true,
+				executionDate: true,
+				submissionDate: true,
 			},
 		});
 
