@@ -16,10 +16,13 @@
       </div>
       <div class="task_details">
         <div class="task_title">
-          {{ task.title }}
+          {{ task.title }} 
+          <span v-if="task.progressPercent > 0" class="text-[10px] text-gray-500">
+            - ({{ task.progressPercent }}%)
+          </span>
           <i
-            class="fas fa-eye fa-xs font-[6px] hover:text-blue-500 cursor-pointer ml-1 !print:hidden"
-            @click.stop="$router.push(`/tasks/${task.id}`)"
+            class="fas fa-eye fa-xs font-[6px] hover:text-blue-500 cursor-pointer ml-1 print:hidden!"
+            @click.stop="$router.push(`/tasks/${task.id}/edit`)"
             title="View task"
           ></i>
         </div>
