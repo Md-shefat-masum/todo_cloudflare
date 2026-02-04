@@ -1294,7 +1294,7 @@ export async function getKanbanTasks(prisma, filters = {}) {
 
 		const tasks = await prisma.task.findMany({
 			where,
-			orderBy: [{ taskStatus: 'asc' }, { serial: 'asc' }],
+			orderBy: [{ taskStatus: 'asc' }, { serial: 'asc' }, {updatedAt: 'desc'}],
 			select: {
 				id: true,
 				title: true,
