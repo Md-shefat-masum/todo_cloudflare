@@ -42,6 +42,7 @@ model Task {
   description    String?
   priority       String    @default("mid") // low, mid, high, urgent
   taskStatus     String    @default("pending") @map("task_status") // pending, in_progress, completed, failed, hold
+  progressPercent Int @default(0) @map("progress_percent")
   submissionDate DateTime? @map("submission_date")
   executionDate  DateTime? @map("execution_date")
   completionDate DateTime? @map("completion_date")
