@@ -230,11 +230,12 @@ export async function listTasks(prisma, filters = {}) {
 	try {
 		const where = { status: 1 };
 
-		if (filters.parentTaskId === undefined) {
+		if (filters.parentTaskId === undefined && filters.taskStatus !== 'not_completed') {
 			where.parentTaskId = null;
-		} else if (filters.parentTaskId !== null) {
+		} else if (filters.parentTaskId) {
 			where.parentTaskId = parseInt(filters.parentTaskId);
 		}
+		
 		const projectId = filters.projectId;
 		if (projectId !== undefined) where.projectId = projectId;
 		if (filters.projectMeetingId != null && filters.projectMeetingId !== '') {
