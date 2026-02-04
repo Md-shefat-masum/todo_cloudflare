@@ -4,7 +4,13 @@
     @click="viewTask"
   >
     <div class="flex justify-between items-start mb-2">
-      <h3 class="font-medium text-gray-800 flex-1">{{ task.title }}</h3>
+      <h3 class="font-medium text-gray-800 flex-1">
+        {{ task.title }}
+        <div class="text-xs text-gray-500" v-if="task.parent_task_info">
+          Task: {{ task.parent_task_info?.parent_task_title }}
+        </div>
+      </h3>
+      
       <span
         :class="[
           'px-2 py-1 rounded text-xs font-semibold',
