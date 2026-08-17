@@ -1,56 +1,104 @@
 <template>
   <form @submit.prevent="handleSubmit" class="space-y-4">
-    <!-- Create mode: multiple task items (title + description) with add more / delete -->
+    <!-- Create mode: basic fields or JSON bulk import -->
     <div v-if="isCreateMode" class="task_list_wrapper space-y-4">
-      <div
-        v-for="(item, index) in taskItems"
-        :key="item._id"
-        class="task_list_item relative rounded-lg border border-gray-200 bg-gray-50/50 p-4"
-      >
-        <button
-          type="button"
-          class="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded transition-colors"
-          :class="taskItems.length <= 1 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-400 hover:text-red-600 hover:bg-red-50'"
-          :disabled="taskItems.length <= 1"
-          :title="taskItems.length <= 1 ? 'Keep at least one task' : 'Remove task'"
-          @click="removeTaskItem(index)"
-        >
-          <i class="fas fa-trash-alt text-sm"></i>
-        </button>
-        <div class="pr-10">
-          <label :for="`title-${item._id}`" class="block text-sm font-medium text-gray-700 mb-1">
-            Title <span class="text-red-500">*</span>
-          </label>
-          <input
-            :id="`title-${item._id}`"
-            v-model="item.title"
-            type="text"
-            class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-            placeholder="Enter task title"
-          />
-          <p v-if="errors[`title-${item._id}`]" class="mt-1 text-sm text-red-600">{{ errors[`title-${item._id}`] }}</p>
+      <div class="flex items-center justify-between gap-3 flex-wrap">
+        <div class="inline-flex rounded-md border border-gray-200 overflow-hidden" role="group" aria-label="Task input mode">
+          <button
+            type="button"
+            class="px-3 py-1.5 text-sm font-medium transition-colors"
+            :class="inputMode === 'basic' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'"
+            @click="setInputMode('basic')"
+          >
+            Basic
+          </button>
+          <button
+            type="button"
+            class="px-3 py-1.5 text-sm font-medium transition-colors border-l border-gray-200"
+            :class="inputMode === 'json' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'"
+            @click="setInputMode('json')"
+          >
+            Bulk JSON
+          </button>
         </div>
-        <div class="mt-3">
-          <label :for="`description-${item._id}`" class="block text-sm font-medium text-gray-700 mb-1">
-            Description
-          </label>
-          <textarea
-            :id="`description-${item._id}`"
-            v-model="item.description"
-            rows="3"
-            class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-            placeholder="Enter task description (optional)"
-          ></textarea>
-        </div>
+        <p class="text-xs text-gray-500">
+          Shared fields below apply to every task.
+        </p>
       </div>
-      <div>
-        <button
-          type="button"
-          class="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md transition-colors border border-blue-200"
-          @click="addTaskItem"
+
+      <template v-if="inputMode === 'basic'">
+        <div
+          v-for="(item, index) in taskItems"
+          :key="item._id"
+          class="task_list_item relative rounded-lg border border-gray-200 bg-gray-50/50 p-4"
         >
-          <i class="fas fa-plus mr-2"></i>Add more task
-        </button>
+          <button
+            type="button"
+            class="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded transition-colors"
+            :class="taskItems.length <= 1 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-400 hover:text-red-600 hover:bg-red-50'"
+            :disabled="taskItems.length <= 1"
+            :title="taskItems.length <= 1 ? 'Keep at least one task' : 'Remove task'"
+            @click="removeTaskItem(index)"
+          >
+            <i class="fas fa-trash-alt text-sm"></i>
+          </button>
+          <div class="pr-10">
+            <label :for="`title-${item._id}`" class="block text-sm font-medium text-gray-700 mb-1">
+              Title <span class="text-red-500">*</span>
+            </label>
+            <input
+              :id="`title-${item._id}`"
+              v-model="item.title"
+              type="text"
+              class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              placeholder="Enter task title"
+            />
+            <p v-if="errors[`title-${item._id}`]" class="mt-1 text-sm text-red-600">{{ errors[`title-${item._id}`] }}</p>
+          </div>
+          <div class="mt-3">
+            <label :for="`description-${item._id}`" class="block text-sm font-medium text-gray-700 mb-1">
+              Description
+            </label>
+            <textarea
+              :id="`description-${item._id}`"
+              v-model="item.description"
+              rows="3"
+              class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              placeholder="Enter task description (optional)"
+            ></textarea>
+          </div>
+        </div>
+        <div>
+          <button
+            type="button"
+            class="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md transition-colors border border-blue-200"
+            @click="addTaskItem"
+          >
+            <i class="fas fa-plus mr-2"></i>Add more task
+          </button>
+        </div>
+      </template>
+
+      <div v-else class="space-y-2">
+        <label for="bulkJsonInput" class="block text-sm font-medium text-gray-700">
+          JSON array <span class="text-red-500">*</span>
+        </label>
+        <textarea
+          id="bulkJsonInput"
+          v-model="jsonInput"
+          rows="10"
+          class="w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none font-mono text-sm"
+          :class="jsonError ? 'border-red-400' : 'border-gray-300'"
+          placeholder='[{"title":"Task one","description":"Optional"},{"title":"Task two"}]'
+          @blur="validateJsonInput"
+        ></textarea>
+        <p class="text-xs text-gray-500">
+          Only <code>title</code> (required) and <code>description</code> (optional) are used from each object.
+        </p>
+        <p v-if="jsonError" class="text-sm text-red-600">{{ jsonError }}</p>
+        <p v-else-if="parsedJsonCount > 0" class="text-sm text-green-700">
+          {{ parsedJsonCount }} task{{ parsedJsonCount === 1 ? '' : 's' }} ready to create.
+        </p>
       </div>
     </div>
 
@@ -325,6 +373,10 @@ export default {
       },
       taskItems: [],
       taskItemNextId: 0,
+      inputMode: 'basic',
+      jsonInput: '',
+      jsonError: '',
+      parsedJsonItems: [],
       errors: {},
       parentTask: null,
       projectMeetings: [],
@@ -349,6 +401,9 @@ export default {
     },
     isCreateMode() {
       return !this.task
+    },
+    parsedJsonCount() {
+      return this.parsedJsonItems.length
     },
   },
   watch: {
@@ -390,6 +445,10 @@ export default {
             comment: newTask.comment || '',
           }
           this.taskItems = []
+          this.inputMode = 'basic'
+          this.jsonInput = ''
+          this.jsonError = ''
+          this.parsedJsonItems = []
           if (this.formData.projectId) {
             this.fetchMeetingsByProject()
           }
@@ -413,6 +472,10 @@ export default {
             comment: '',
           }
           this.taskItems = [this.newTaskItem()]
+          this.inputMode = 'basic'
+          this.jsonInput = ''
+          this.jsonError = ''
+          this.parsedJsonItems = []
           if (inheritedProjectId) {
             this.fetchMeetingsByProject()
           }
@@ -516,10 +579,81 @@ export default {
       if (this.taskItems.length <= 1) return
       this.taskItems.splice(index, 1)
     },
+    setInputMode(mode) {
+      if (mode !== 'basic' && mode !== 'json') return
+      this.inputMode = mode
+      this.errors = {}
+      if (mode !== 'json') {
+        this.jsonError = ''
+      } else if (String(this.jsonInput || '').trim()) {
+        this.validateJsonInput()
+      } else {
+        this.jsonError = ''
+        this.parsedJsonItems = []
+      }
+    },
+    parseJsonTasks(raw) {
+      const trimmed = String(raw || '').trim()
+      if (!trimmed) {
+        return { ok: false, error: 'JSON is required.', items: [] }
+      }
+
+      let parsed
+      try {
+        parsed = JSON.parse(trimmed)
+      } catch (e) {
+        return { ok: false, error: 'Invalid JSON. Fix the syntax and try again.', items: [] }
+      }
+
+      if (!Array.isArray(parsed)) {
+        return { ok: false, error: 'JSON must be an array of task objects.', items: [] }
+      }
+      if (parsed.length === 0) {
+        return { ok: false, error: 'JSON array must contain at least one task.', items: [] }
+      }
+
+      const items = []
+      for (let i = 0; i < parsed.length; i++) {
+        const entry = parsed[i]
+        if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+          return { ok: false, error: `Item ${i + 1} must be an object with title and optional description.`, items: [] }
+        }
+        const title = entry.title != null ? String(entry.title).trim() : ''
+        if (!title) {
+          return { ok: false, error: `Item ${i + 1} is missing a required title.`, items: [] }
+        }
+        const description = entry.description != null && String(entry.description).trim() !== ''
+          ? String(entry.description).trim()
+          : null
+        items.push({ title, description })
+      }
+
+      return { ok: true, error: '', items }
+    },
+    validateJsonInput() {
+      if (this.inputMode !== 'json') {
+        this.jsonError = ''
+        this.parsedJsonItems = []
+        return true
+      }
+
+      const result = this.parseJsonTasks(this.jsonInput)
+      this.jsonError = result.error
+      this.parsedJsonItems = result.ok ? result.items : []
+      return result.ok
+    },
     validate() {
       this.errors = {}
 
       if (this.isCreateMode) {
+        if (this.inputMode === 'json') {
+          if (!this.validateJsonInput()) {
+            this.errors._form = this.jsonError || 'Fix the JSON before submitting.'
+            return false
+          }
+          return true
+        }
+
         if (!this.taskItems.length) {
           this.errors._form = 'Add at least one task.'
           return false
@@ -564,10 +698,15 @@ export default {
       }
 
       if (this.isCreateMode) {
-        const items = this.taskItems.map((item) => ({
-          title: String(item.title).trim(),
-          description: item.description ? String(item.description).trim() : null,
-        }))
+        const items = this.inputMode === 'json'
+          ? this.parsedJsonItems.map((item) => ({
+              title: item.title,
+              description: item.description ?? null,
+            }))
+          : this.taskItems.map((item) => ({
+              title: String(item.title).trim(),
+              description: item.description ? String(item.description).trim() : null,
+            }))
         this.$emit('submit', { batch: true, items, shared })
         return
       }
